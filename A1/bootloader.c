@@ -5,6 +5,12 @@ asm(".code16gcc\n");
 
 #define NULL 0
 
+typedef int bool;
+#define TRUE 1
+#define FALSE 0
+
+#define BUFFER_SIZE 100
+
 /* needs to stay the first line */
 asm("jmp $0, $main");
 
@@ -13,58 +19,61 @@ void printCharacter(char toPrint)
 {
     asm(
         "int $0x10;"
-        :
-        : "a" (0x0E00 | toPrint)
+        :: "a" (0x0E00 | toPrint)
     );
     return;
 }
 
-void printString(char* toPrint)
+void printString(char * toPrint)
 {
     for (int i = 0; toPrint[i] != '\0'; i++)
-    {
         printCharacter(toPrint[i]);
-    }
 }
 
-char getCharacter(int bShow, char mask)
+void printLine(char * toPrint)
+{
+    printString(toPrint);
+    printCharacter('\n');
+}
+
+char getCharacter(void)
 {
     char c;
-    asm(
+    asm volatile(
         "int $0x10;"
-        :"=a"(0x0800 | c)
+        :"=al"(c)
+        :"ah"(0x08)
     );
-    if (bShow != 0)
-    {
-        if ((mask == (char) 255) || (c == '\n')){
-            printCharacter(c);
-        } else {
-            printCharacter(mask);
-        }
-    }
     return c;
 }
 
-char* getString(char* retVal, int bufferLength, int bShow, char mask)
+void getLine(char * buffer, int bufferLength, bool show, char mask)
 {
     int length = 0;
     while (length < bufferLength)
     {
-        char newC = getCharacter(bShow, mask);
-        if (newC == '\n')
+        char c = getCharacter();
+        if (show)
         {
-            break;
-        } else {
-            retVal[length++] = newC;
+            if ((mask == (char) 255) || (c == '\n'))
+                printCharacter(c);
+            else
+                printCharacter(mask);
         }
+
+        if (c == '\n')
+            break;
+        else
+            buffer[length++] = c;
     }
-    retVal[length] = '\0';
-    return retVal;
+    buffer[length] = '\0';
 }
 
 void rebootSystem(){ asm("int $0x19;"); }
 
 void main(void)
 {
-	asm("jmp .");
+    char input[BUFFER_SIZE];
+    getLine(input, BUFFER_SIZE, TRUE, (char) 255);
+    printLine(input);
 }
