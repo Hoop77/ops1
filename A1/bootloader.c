@@ -54,7 +54,7 @@ void getLine(char * buffer, int bufferLength)
             break;
         else
         {
-            printCharacter(c);
+            printCharacter('.');
             buffer[length++] = c;
         }   
     }
@@ -75,6 +75,7 @@ void main(void)
     getLine(input, BUFFER_LENGTH);
     printLine("");
     printLine(input);
+	rebootSystem();
 
     while (1);
 }
