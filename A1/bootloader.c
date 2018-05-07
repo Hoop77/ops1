@@ -71,7 +71,7 @@ void main(void)
     #define BUFFER_LENGTH 10
     char input[BUFFER_LENGTH];
     
-    printLine("Hallo World!");
+    printLine("Hello!");
     getLine(input, BUFFER_LENGTH);
     printLine("");
     printLine(input);
