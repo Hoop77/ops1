@@ -9,14 +9,11 @@ asm("jmp $0, $main;");
 /* space for additional code */
 void printCharacter(char c)
 {
-    asm volatile("push %ax;");
-    asm volatile("push %bx;");
-    asm volatile(
-        "int $0x10;"
-        :: "ax" (0x0e00 | c), "bx"(0x0000)
-    );
-    asm volatile("pop %bx;");
-    asm volatile("pop %ax;");
+	asm(
+		"mov $0x0E, %%ah;"
+		"int $0x10;"
+		:: "a"(c)
+	);
 }
 
 void printLine(char * toPrint)
@@ -28,53 +25,56 @@ void printLine(char * toPrint)
     printCharacter('\r');
 }
 
-char getCharacter(void)
+char readCharacter(void)
 {
-    char c;
-    asm volatile("push %ax;");
-    asm volatile("push %bx;");
-    asm volatile(
-        "int $0x16;"
-        :"=al"(c)
-        :"ah"(0x00)
-    );
-    asm volatile("pop %bx;");
-    asm volatile("pop %ax;");
-    return c;
+    char result;
+	asm volatile(
+		"mov $0x0, %%ah;"
+		"int $0x16;"
+        "movb $0x04, %%ah;"
+		"int $0x16;"
+		: "=a"(result)
+	);
+	return result;
 }
 
-void getLine(char * buffer, int bufferLength)
+int readPassword(char * buffer, int bufferLength)
 {
-    int length = 0;
+    int passwordLength = 0;
     char c;
-    while (length < bufferLength - 1)
+    while (passwordLength < bufferLength - 1)
     {
-        c = getCharacter();
+        c = readCharacter();
         if (c == '\r')
             break;
         else
         {
-            printCharacter(c);
-            buffer[length++] = c;
-        }   
+            printCharacter('.');
+            buffer[passwordLength++] = c;
+        }
     }
-    buffer[length] = '\0';
+    buffer[passwordLength] = '\0';
+    return passwordLength;
 }
 
-void rebootSystem(void)
+void reboot(void)
 {
-    asm("int $0x19;"); 
+    asm("int $0x19;");
 }
 
 void main(void)
 {
-    #define BUFFER_LENGTH 10
-    char input[BUFFER_LENGTH];
-    
-    printLine("Hallo World!");
-    getLine(input, BUFFER_LENGTH);
-    printLine("");
-    printLine(input);
-
-    while (1);
+    #define BUFFER_LENGTH 9 // the last byte is used for zero termination
+    char password[BUFFER_LENGTH];
+    printLine("Hallo!");
+    for (;;)
+    {
+        if (!readPassword(password, BUFFER_LENGTH))
+        {
+            printLine("Reboot!");
+            reboot();
+        }
+        printLine("");
+        printLine(password);
+    }
 }
