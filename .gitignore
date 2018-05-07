@@ -1,2 +1,5 @@
 *.bin
 .vscode
+osp-vm.zip
+S16
+swap.c
