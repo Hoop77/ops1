@@ -3,3 +3,5 @@
 osp-vm.zip
 S16
 swap.c
+*.o
+*.elf

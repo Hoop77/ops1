@@ -3,77 +3,78 @@
 asm(".code16gcc\n");
 #endif
 
-#define NULL 0
-
-typedef int bool;
-#define TRUE 1
-#define FALSE 0
-
-#define BUFFER_SIZE 100
-
 /* needs to stay the first line */
-asm("jmp $0, $main");
+asm("jmp $0, $main;");
 
 /* space for additional code */
-void printCharacter(char toPrint)
+void printCharacter(char c)
 {
-    asm(
+    asm volatile("push %ax;");
+    asm volatile("push %bx;");
+    asm volatile(
         "int $0x10;"
-        :: "a" (0x0E00 | toPrint)
+        :: "ax" (0x0e00 | c), "bx"(0x0000)
     );
-    return;
-}
-
-void printString(char * toPrint)
-{
-    for (int i = 0; toPrint[i] != '\0'; i++)
-        printCharacter(toPrint[i]);
+    asm volatile("pop %bx;");
+    asm volatile("pop %ax;");
 }
 
 void printLine(char * toPrint)
 {
-    printString(toPrint);
+    while (*toPrint)
+        printCharacter(*(toPrint++));
+    
     printCharacter('\n');
+    printCharacter('\r');
 }
 
 char getCharacter(void)
 {
     char c;
+    asm volatile("push %ax;");
+    asm volatile("push %bx;");
     asm volatile(
-        "int $0x10;"
+        "int $0x16;"
         :"=al"(c)
-        :"ah"(0x08)
+        :"ah"(0x00)
     );
+    asm volatile("pop %bx;");
+    asm volatile("pop %ax;");
     return c;
 }
 
-void getLine(char * buffer, int bufferLength, bool show, char mask)
+void getLine(char * buffer, int bufferLength)
 {
     int length = 0;
-    while (length < bufferLength)
+    char c;
+    while (length < bufferLength - 1)
     {
-        char c = getCharacter();
-        if (show)
-        {
-            if ((mask == (char) 255) || (c == '\n'))
-                printCharacter(c);
-            else
-                printCharacter(mask);
-        }
-
-        if (c == '\n')
+        c = getCharacter();
+        if (c == '\r')
             break;
         else
+        {
+            printCharacter(c);
             buffer[length++] = c;
+        }   
     }
     buffer[length] = '\0';
 }
 
-void rebootSystem(){ asm("int $0x19;"); }
+void rebootSystem(void)
+{
+    asm("int $0x19;"); 
+}
 
 void main(void)
 {
-    char input[BUFFER_SIZE];
-    getLine(input, BUFFER_SIZE, TRUE, (char) 255);
+    #define BUFFER_LENGTH 10
+    char input[BUFFER_LENGTH];
+    
+    printLine("Hallo World!");
+    getLine(input, BUFFER_LENGTH);
+    printLine("");
     printLine(input);
+
+    while (1);
 }

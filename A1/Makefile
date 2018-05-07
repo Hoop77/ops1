@@ -26,3 +26,6 @@ pack:
 
 clean:
 	$(RM) $(RMFILES) $(TAR) $(PCK)
+
+asm:
+	$(CC) $(CFLAGS) -S $(SRC)
