@@ -10,9 +10,8 @@ asm("jmp $0, $main;");
 void printCharacter(char c)
 {
 	asm(
-		"mov $0x0E, %%ah;"
 		"int $0x10;"
-		:: "a"(c)
+		:: "a"(0x0E00 | c)
 	);
 }
 
@@ -29,11 +28,9 @@ char readCharacter(void)
 {
     char result;
 	asm volatile(
-		"mov $0x0, %%ah;"
-		"int $0x16;"
-        "movb $0x04, %%ah;"
 		"int $0x16;"
 		: "=a"(result)
+        : "a"(0)
 	);
 	return result;
 }

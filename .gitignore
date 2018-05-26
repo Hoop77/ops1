@@ -1,7 +1,8 @@
 *.bin
 .vscode
-osp-vm.zip
+*.zip
 S16
-swap.c
 *.o
 *.elf
+cmake-build-debug/
+.idea/

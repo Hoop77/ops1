@@ -20,7 +20,7 @@ int main(int argc, char **argv)
 	{
 		/* child process */
       	close(pdes[0]);
-        	close(1);       /* close stdout */
+        close(1);       /* close stdout */
 		
 		if (dup(pdes[1]) < 0)
 			die("dup()");
