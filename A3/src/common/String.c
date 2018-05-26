@@ -12,7 +12,13 @@ static void StringItemDestroyer(Vector_Item string)
     String_Destroy(string);
 }
 
-void String_Init(String * self, const char * str)
+void String_Init(String * self)
+{
+    Vector_InitCharVector(self);
+    Vector_Append(self, (Vector_Item) &NULL_CHAR);
+}
+
+void String_InitFromCharArray(String * self, const char * str)
 {
     Vector_InitCharVector(self);
     size_t len = strlen(str);
@@ -76,14 +82,14 @@ void String_Split(String * self, char delimiter, Vector * split)
 {
     Vector_Init(split, sizeof(String), StringItemDestroyer);
     String str;
-    String_Init(&str, "");
+    String_InitFromCharArray(&str, "");
     for (size_t i = 0; i < String_Size(self); ++i)
     {
         char c = String_CharAt(self, i);
         if (c == delimiter)
         {
             Vector_Append(split, (Vector_Item) &str);
-            String_Init(&str, "");
+            String_InitFromCharArray(&str, "");
         }
         else
         {

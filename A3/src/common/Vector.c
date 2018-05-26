@@ -3,8 +3,8 @@
 //
 
 #include "../../include/common/Vector.h"
+#include "../../include/common/Utils.h"
 #include <string.h>
-#include <stdlib.h>
 
 #define ITEM_ADDR(self, index) \
     ((Vector_Item) ((char *) self->items + (index * self->itemSize)))
@@ -46,7 +46,7 @@ void Vector_Copy(Vector * self, Vector * copy)
     size_t len = copy->itemSize * copy->capacity;
     copy->items = malloc(len);
     if (!copy->items)
-        exit(-1);
+        terminate();
     memcpy(copy->items, self->items, len);
 }
 
@@ -57,7 +57,7 @@ void Vector_Append(Vector * self, Vector_Item item)
     {
         self->items = malloc(self->itemSize);
         if (!self->items)
-            exit(-1);
+            terminate();
         self->capacity = 1;
     }
 
@@ -66,7 +66,7 @@ void Vector_Append(Vector * self, Vector_Item item)
         self->capacity *= 2;
         self->items = realloc(self->items, self->capacity * self->itemSize);
         if (!self->items)
-            exit(-1);
+            terminate();
     }
 
     SET(self, item, insertIndex);

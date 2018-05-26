@@ -12,9 +12,10 @@
 // An empty vector represents the root path ('/').
 typedef Vector Path;
 
-bool Path_FromString(Path * self, String * strPath);
+// After calling this, self represents the root path ('/').
+void Path_Init(Path * self);
 
-void Path_Root(Path * self);
+bool Path_InitFromCharArray(Path * self, const char * path);
 
 void Path_Destroy(Path * self);
 

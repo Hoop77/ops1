@@ -12,13 +12,15 @@ set(SOURCE_FILES
         include/common/String.h
         include/common/Utils.h
         include/common/Path.h
+        include/common/Program.h
         src/common/Vector.c
         src/common/Acceptor.c
         src/common/Socket.c
         src/common/FileTransfer.c
         src/common/Shell.c
         src/common/String.c
-        src/common/Path.c)
+        src/common/Path.c
+        src/common/Program.c)
 
 add_executable(RemoteShell ${SOURCE_FILES} srv/server.h srv/server.c )
 

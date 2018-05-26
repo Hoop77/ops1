@@ -7,10 +7,11 @@
 
 #include <stdbool.h>
 #include "Vector.h"
+#include "Path.h"
 
 typedef struct
 {
-
+    Path initialCwd;
 } Shell;
 
 void Shell_Init(Shell * self);
@@ -18,7 +19,5 @@ void Shell_Init(Shell * self);
 void Shell_Destroy(Shell * self);
 
 void Shell_Prompt(Shell * self);
-
-void Shell_ChangeDirectory(Shell * self, Vector * args);
 
 #endif //REMOTESHELL_SHELL_H

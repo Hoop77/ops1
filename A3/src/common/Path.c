@@ -10,24 +10,32 @@ static void StringItemDestroyer(Vector_Item item)
     String_Destroy(item);
 }
 
-bool Path_FromString(Path * self, String * strPath)
+void Path_Init(Path * self)
+{
+    Vector_Init(self, sizeof(String), StringItemDestroyer);
+}
+
+bool Path_InitFromCharArray(Path * self, const char * path)
 {
     bool result = true;
-    Path_Root(self);
+    Path_Init(self);
 
-    if (String_IsEmpty(strPath) || String_CharAt(strPath, 0) != '/')
+    String strPath;
+    String_InitFromCharArray(&strPath, path);
+    if (String_IsEmpty(&strPath) || String_CharAt(&strPath, 0) != '/')
     {
-        result = false;
-        goto Path_Init_End;
+        String_Destroy(&strPath);
+        return false;
     }
 
     Vector split;
-    String_Split(strPath, '/', &split);
+    String_Split(&strPath, '/', &split);
+    // strPath doesn't contain any '/' chars
     if (Vector_Size(&split) == 1)
     {
-        // strPath doesn't contain any '/' chars
-        result = false;
-        goto Path_Init_Cleanup;
+        String_Destroy(&strPath);
+        Vector_Destroy(&split);
+        return false;
     }
 
     // split[0] is empty because strPath starts with '/'
@@ -37,10 +45,11 @@ bool Path_FromString(Path * self, String * strPath)
 
         if (String_IsEmpty(dirName) && i != Vector_Size(&split) - 1)
         {
-            result = false;
-            goto Path_Init_Cleanup;
+            String_Destroy(&strPath);
+            Vector_Destroy(&split);
+            return false;
         }
-        else if(String_IsEmpty(dirName) && i == Vector_Size(&split) - 1)
+        else if (String_IsEmpty(dirName) && i == Vector_Size(&split) - 1)
         {
             // Permit '/' at the path end without a following directory name.
             break;
@@ -51,16 +60,9 @@ bool Path_FromString(Path * self, String * strPath)
         Vector_Append(self, &dirNameCopy);
     }
 
-Path_Init_Cleanup:
+    String_Destroy(&strPath);
     Vector_Destroy(&split);
-
-Path_Init_End:
-    return result;
-}
-
-void Path_Root(Path * self)
-{
-    Vector_Init(self, sizeof(String), StringItemDestroyer);
+    return true;
 }
 
 void Path_Destroy(Path * self)
@@ -75,7 +77,7 @@ size_t Path_Depth(Path * self)
 
 void Path_CommonPrefix(Path * self, Path * other, Path * commonPrefix)
 {
-    Path_Root(commonPrefix);
+    Path_Init(commonPrefix);
     for (size_t i = 0; i < Path_Depth(self); ++i)
     {
         String * selfDirName = Vector_At(self, i);
@@ -90,7 +92,7 @@ void Path_CommonPrefix(Path * self, Path * other, Path * commonPrefix)
 
 void Path_RelativePath(Path * self, Path * other, String * relativePath)
 {
-    String_Init(relativePath, "");
+    String_Init(relativePath);
 
     Path commonPrefix;
     Path_CommonPrefix(self, other, &commonPrefix);

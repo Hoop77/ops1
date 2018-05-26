@@ -9,7 +9,9 @@
 
 typedef Vector String;
 
-void String_Init(String * self, const char * str);
+void String_Init(String * self);
+
+void String_InitFromCharArray(String * self, const char * str);
 
 void String_Destroy(String * self);
 
