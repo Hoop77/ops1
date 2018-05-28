@@ -18,7 +18,6 @@ void Path_Init(Path * self)
 
 bool Path_InitFromCharArray(Path * self, const char * path)
 {
-    bool result = true;
     Path_Init(self);
 
     String strPath;

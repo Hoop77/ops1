@@ -26,8 +26,8 @@ set(SOURCE_FILES
         src/common/Pipe.c
         src/common/RemoteShell.c)
 
-add_executable(Server ${SOURCE_FILES} srv/server.h srv/server.c)
+add_executable(Server ${SOURCE_FILES} include/srv/server.h src/srv/server.c)
 
-add_executable(Client ${SOURCE_FILES} cli/client.c cli/client.h)
+add_executable(Client ${SOURCE_FILES} src/cli/client.c include/cli/client.h)
 
 add_executable(Test ${SOURCE_FILES} test/TestFramework.h test/Test.c)

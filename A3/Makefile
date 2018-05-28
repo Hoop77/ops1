@@ -3,30 +3,43 @@
 .PHONY: all run pack clean
 .SILENT: run
 
-TAR = cli/client srv/server
+TAR = client server
+
+SERVER_SRC = $(wildcard src/srv/*.c)
+CLIENT_SRC = $(wildcard src/cli/*.c)
+COMMON_SRC = $(wildcard src/common/*.c)
+
+CLIENT_OBJ = $(CLIENT_SRC:%.c=%.o)
+SERVER_OBJ = $(SERVER_SRC:%.c=%.o)
+COMMON_OBJ = $(COMMON_SRC:%.c=%.o)
+
 PCK = lab-3.zip
 
 export CFLAGS = -std=gnu11 -c -g -Os -Wall -Werror
 
+%.o: %.c %.h
+	$(CC) $(CFLAGS) $< -o $@
+
+%.o: %.c
+	$(CC) $(CFLAGS) $< -o $@
+
 all: $(TAR)
 
 run: all
-	srv/server& echo $$! > .srv_pid
+	server& echo $$! > .srv_pid
 	echo "Client Ready:"
-	cli/client
+	client
 	kill `cat .srv_pid`
 	$(RM) $(RMFILES) .srv_pid
 
 pack: clean
-	zip -r $(PCK) cli srv Makefile -x "*/.*"
+	zip -r $(PCK) cli srv src include Makefile -x "*/.*"
 
 clean:
-	@$(MAKE) -C cli clean
-	@$(MAKE) -C srv clean
-	$(RM) $(RMFILES) $(PCK)
+	$(RM) $(RMFILES) $(CLIENT_OBJ) $(SERVER_OBJ) $(COMMON_OBJ) $(TAR) $(PCK)
 
-cli/client: cli/*.c cli/*.h
-	@$(MAKE) -C $(@D)
+client: $(CLIENT_OBJ) $(COMMON_OBJ)
+	$(CC) $^ -o $@
 
-srv/server: srv/*.c srv/*.h
-	@$(MAKE) -C $(@D)
+server: $(SERVER_OBJ) $(COMMON_OBJ)
+	$(CC) $^ -o $@

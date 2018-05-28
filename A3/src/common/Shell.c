@@ -206,6 +206,9 @@ static void ExecutePrograms(Shell * self, Vector * programs)
                     Pipe_Copy(outPipe, inPipe);
                     Pipe_Init(outPipe);
                     break;
+
+                case PROGRAM_OPERATOR_NONE:
+                    break;
             }
         }
     Vector_ForeachEnd

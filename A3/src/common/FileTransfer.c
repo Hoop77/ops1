@@ -6,11 +6,11 @@
 
 bool FileUpload(const char * filename, int fd)
 {
-
+    return false;
 }
 
 bool FileDownload(const char * filename, int fd)
 {
-
+    return false;
 }
 

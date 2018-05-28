@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "../include/common/Acceptor.h"
-#include "../include/common/Utils.h"
-#include "../include/common/Shell.h"
+#include "../../include/common/Acceptor.h"
+#include "../../include/common/Utils.h"
+#include "../../include/common/Shell.h"
 
 #define PORT 9000
 

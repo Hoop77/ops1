@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "../include/common/Socket.h"
-#include "../include/common/Utils.h"
-#include "../include/common/Pipe.h"
+#include "../../include/common/Socket.h"
+#include "../../include/common/Utils.h"
+#include "../../include/common/Pipe.h"
 #include <unistd.h>
 #include <signal.h>
 
@@ -28,7 +28,7 @@ int main()
     Pipe connectedPipe = {-1};
     Pipe_Init(connectedPipe);
 
-    pid_t readPid = ReadProcess(sock, connectedPipe);
+    ReadProcess(sock, connectedPipe);
     pid_t writePid = WriteProcess(sock);
     pid_t fileTransferPid = FileTransferProcess();
 
@@ -62,7 +62,10 @@ static pid_t ReadProcess(Socket sock, Pipe connectedPipe)
     char buf[BUFLEN];
     ssize_t len;
     while ((len = read(sock, buf, BUFLEN)) > 0)
-        write(STDOUT_FILENO, buf, (size_t) len);
+    {
+        if (write(STDOUT_FILENO, buf, (size_t) len) <= 0)
+            terminate();
+    }
 
     char connectedFlag = 1;
     if (write(Pipe_WriteDescriptor(connectedPipe), &connectedFlag, 1) <= 0)
@@ -84,7 +87,10 @@ static pid_t WriteProcess(Socket sock)
     char buf[BUFLEN];
     ssize_t len;
     while ((len = read(STDIN_FILENO, buf, BUFLEN)) > 0)
-        write(sock, buf, (size_t) len);
+    {
+        if (write(sock, buf, (size_t) len) <= 0)
+            break;
+    }
 
     exit(EXIT_SUCCESS);
     return -1;
