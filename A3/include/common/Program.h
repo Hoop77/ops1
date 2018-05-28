@@ -6,27 +6,28 @@
 #define REMOTESHELL_PROGRAM_H
 
 #include "Vector.h"
+#include "String.h"
 
 typedef enum
 {
     PROGRAM_OPERATOR_NONE,
     PROGRAM_OPERATOR_BACKGROUND,
     PROGRAM_OPERATOR_PIPE
-} Program_Operator;
+} ProgramOperator;
 
 typedef struct
 {
     Vector args;
-    Program_Operator operator;
+    ProgramOperator operator;
 } Program;
 
 void Program_Init(Program * self);
 
 void Program_Destroy(Program * self);
 
-Program_Operator Program_GetOperator(Program * self);
+ProgramOperator Program_Operator(Program * self);
 
-Vector * Program_GetArgs(Program * self);
+Vector * Program_Args(Program * self);
 
 bool Program_ParseCmdLine(Vector * programs, const char * cmdLine);
 

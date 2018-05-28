@@ -12,7 +12,19 @@
 typedef struct
 {
     Path initialCwd;
+    Vector backgroundProcesses;
+    Vector shellProgramMappings;
 } Shell;
+
+// A shell program represents program which is part of the shell (e.g. cd, exit or wait).
+typedef void (*ShellProgram)(Shell * shell, Vector * args);
+
+// Maps a name to a shell program function pointer.
+typedef struct
+{
+    String name;
+    ShellProgram program;
+} ShellProgramMapping;
 
 void Shell_Init(Shell * self);
 

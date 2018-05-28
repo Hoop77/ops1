@@ -6,12 +6,12 @@
 #include "../../include/common/Program.h"
 #include "../../include/common/String.h"
 
-static void StringItemDestroyer(Vector_Item item)
+static void StringItemDestroyer(VectorItem item)
 {
     String_Destroy(item);
 }
 
-static void ProgramItemDestroyer(Vector_Item item)
+static void ProgramItemDestroyer(VectorItem item)
 {
     Program_Destroy(item);
 }
@@ -32,12 +32,12 @@ void Program_Destroy(Program * self)
     Vector_Destroy(&self->args);
 }
 
-Program_Operator Program_GetOperator(Program * self)
+ProgramOperator Program_Operator(Program * self)
 {
     return self->operator;
 }
 
-Vector * Program_GetArgs(Program * self)
+Vector * Program_Args(Program * self)
 {
     return &self->args;
 }
@@ -55,7 +55,7 @@ bool Program_ParseCmdLine(Vector * programs, const char * cmdLine)
     for (size_t i = 0; i < len; ++i)
     {
         char c = cmdLine[i];
-        Program_Operator currOperator = PROGRAM_OPERATOR_NONE;
+        ProgramOperator currOperator = PROGRAM_OPERATOR_NONE;
 
         if (c == ' ')
         {

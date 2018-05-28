@@ -8,30 +8,31 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-typedef void * Vector_Item;
-typedef size_t Vector_Iterator;
-typedef void (* Vector_ItemDestroyer)(Vector_Item);
+typedef void * VectorItem;
+typedef size_t VectorIterator;
+typedef void (* VectorItemDestroyer)(VectorItem);
+typedef bool (* VectorItemComparator)(VectorItem, VectorItem);
 
 typedef struct
 {
     size_t size;
     size_t capacity;
     size_t itemSize;
-    Vector_Item * items;
-    Vector_ItemDestroyer destroyer;
+    VectorItem * items;
+    VectorItemDestroyer destroyer;
 } Vector;
 
 #define Vector_ForeachBegin(self, item, iterator) \
-        Vector_Iterator iterator; \
+        VectorIterator iterator; \
         for (iterator = 0; i < Vector_Size(self); ++iterator) \
         { item = Vector_At(self, iterator);
 
 #define Vector_ForeachEnd }
 
-#define Vector_Item2Int(item) (* (int *) item)
-#define Vector_Item2Char(item) (* (char *) item)
+#define VectorItem_ToInt(item) (* (int *) item)
+#define VectorItem_ToChar(item) (* (char *) item)
 
-void Vector_Init(Vector * self, size_t itemSize, Vector_ItemDestroyer destroyer);
+void Vector_Init(Vector * self, size_t itemSize, VectorItemDestroyer destroyer);
 
 void Vector_InitCharVector(Vector * self);
 
@@ -41,12 +42,16 @@ void Vector_Destroy(Vector * self);
 
 void Vector_Copy(Vector * self, Vector * copy);
 
-void Vector_Append(Vector * self, Vector_Item item);
+void Vector_Append(Vector * self, VectorItem item);
 
-Vector_Item Vector_At(Vector * self, size_t index);
+void Vector_Remove(Vector * self, size_t index);
+
+VectorItem Vector_At(Vector * self, size_t index);
 
 size_t Vector_Size(Vector * self);
 
 bool Vector_IsEmpty(Vector * self);
+
+bool Vector_Contains(Vector * self, VectorItem searchItem, VectorItemComparator comparator);
 
 #endif //REMOTE_SHELL_VECTOR_H

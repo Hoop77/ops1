@@ -7,12 +7,17 @@
 #include <string.h>
 
 #define ITEM_ADDR(self, index) \
-    ((Vector_Item) ((char *) self->items + (index * self->itemSize)))
+    ((VectorItem) ((char *) self->items + ((index) * self->itemSize)))
 
-#define SET(self, item, index) \
+#define COPY_TO_INDEX(self, item, index) \
     memcpy(ITEM_ADDR(self, index), item, self->itemSize)
 
-void Vector_Init(Vector * self, size_t itemSize, Vector_ItemDestroyer destroyer)
+#define REALLOC(self) \
+    self->items = realloc(self->items, self->capacity * self->itemSize); \
+    if (!self->items) \
+        terminate();
+
+void Vector_Init(Vector * self, size_t itemSize, VectorItemDestroyer destroyer)
 {
     memset(self, 0, sizeof(Vector));
     self->itemSize = itemSize;
@@ -31,7 +36,7 @@ void Vector_InitIntVector(Vector * self)
 
 void Vector_Destroy(Vector * self)
 {
-    Vector_Item item;
+    VectorItem item;
     Vector_ForeachBegin(self, item, i)
         if (self->destroyer)
             self->destroyer(item);
@@ -50,7 +55,7 @@ void Vector_Copy(Vector * self, Vector * copy)
     memcpy(copy->items, self->items, len);
 }
 
-void Vector_Append(Vector * self, Vector_Item item)
+void Vector_Append(Vector * self, VectorItem item)
 {
     size_t insertIndex = self->size;
     if (self->size == 0)
@@ -64,16 +69,27 @@ void Vector_Append(Vector * self, Vector_Item item)
     if (self->size == self->capacity)
     {
         self->capacity *= 2;
-        self->items = realloc(self->items, self->capacity * self->itemSize);
-        if (!self->items)
-            terminate();
+        REALLOC(self);
     }
 
-    SET(self, item, insertIndex);
+    COPY_TO_INDEX(self, item, insertIndex);
     self->size++;
 }
 
-Vector_Item Vector_At(Vector * self, size_t index)
+void Vector_Remove(Vector * self, size_t index)
+{
+    for (size_t i = index + 1; i < self->size; ++i)
+        COPY_TO_INDEX(self, ITEM_ADDR(self, i), i - 1);
+
+    self->size--;
+    if (self->size < self->capacity / 2)
+    {
+        self->capacity /= 2;
+        REALLOC(self);
+    }
+}
+
+VectorItem Vector_At(Vector * self, size_t index)
 {
     return ITEM_ADDR(self, index);
 }
@@ -86,4 +102,14 @@ size_t Vector_Size(Vector * self)
 bool Vector_IsEmpty(Vector * self)
 {
     return self->size == 0;
+}
+
+bool Vector_Contains(Vector * self, VectorItem searchItem, VectorItemComparator comparator)
+{
+    VectorItem currItem;
+    Vector_ForeachBegin(self, currItem, i)
+        if (comparator(currItem, searchItem))
+            return true;
+    Vector_ForeachEnd;
+    return false;
 }

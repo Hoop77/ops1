@@ -35,4 +35,6 @@ void String_Split(String * self, char delimiter, Vector * split);
 
 bool String_Equals(String * self, String * other);
 
+bool String_ToInt(String * self, int * value);
+
 #endif //REMOTESHELL_STRING_H

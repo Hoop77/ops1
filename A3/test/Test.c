@@ -11,15 +11,15 @@
 
 TEST_INIT;
 
-void Vector_Test_Append()
+static void Vector_Test_Append()
 {
     TEST_BEGIN("Vector_Test_Append");
 
     Vector vector;
     Vector_InitCharVector(&vector);
-    Vector_Append(&vector, (Vector_Item) "a");
-    Vector_Append(&vector, (Vector_Item) "b");
-    Vector_Append(&vector, (Vector_Item) "c");
+    Vector_Append(&vector, "a");
+    Vector_Append(&vector, "b");
+    Vector_Append(&vector, "c");
 
     TEST_EQ(Vector_Size(&vector), 3);
 
@@ -37,7 +37,30 @@ void Vector_Test_Append()
     TEST_END;
 }
 
-void String_Test_AppendChar()
+static void Vector_Test_Remove()
+{
+    TEST_BEGIN("Vector_Test_Remove");
+
+    Vector vector;
+    Vector_InitIntVector(&vector);
+    int x;
+    x = 5480;
+    Vector_Append(&vector, &x);
+    x = 5481;
+    Vector_Append(&vector, &x);
+
+    Vector_Remove(&vector, 0);
+    TEST_EQ(Vector_Size(&vector), 1);
+
+    x = VectorItem_ToInt(Vector_At(&vector, 0));
+    TEST_EQ(x, 5481);
+
+    Vector_Destroy(&vector);
+
+    TEST_END;
+}
+
+static void String_Test_AppendChar()
 {
     TEST_BEGIN("String_Test_AppendChar");
 
@@ -50,7 +73,7 @@ void String_Test_AppendChar()
     TEST_END;
 }
 
-void String_Test_Split_Path()
+static void String_Test_Split_Path()
 {
     TEST_BEGIN("String_Test_Split_Path");
 
@@ -72,7 +95,7 @@ void String_Test_Split_Path()
     TEST_END;
 }
 
-void String_Test_Split_NoDelimiter()
+static void String_Test_Split_NoDelimiter()
 {
     TEST_BEGIN("String_Test_Split_Path");
 
@@ -92,7 +115,7 @@ void String_Test_Split_NoDelimiter()
     TEST_END;
 }
 
-void Path_Test_InitRoot()
+static void Path_Test_InitRoot()
 {
     TEST_BEGIN("Path_Test_InitRoot");
 
@@ -104,7 +127,7 @@ void Path_Test_InitRoot()
     TEST_END;
 }
 
-void Path_Test_InitNoPath()
+static void Path_Test_InitNoPath()
 {
     TEST_BEGIN("Path_Test_InitNoPath");
 
@@ -115,7 +138,7 @@ void Path_Test_InitNoPath()
     TEST_END;
 }
 
-void Path_Test_InitValidPath()
+static void Path_Test_InitValidPath()
 {
     TEST_BEGIN("Path_Test_InitValidPath");
 
@@ -143,7 +166,7 @@ void Path_Test_InitValidPath()
     TEST_END;
 }
 
-void Path_Test_RelativePathInside()
+static void Path_Test_RelativePathInside()
 {
     TEST_BEGIN("Path_Test_RelativePathInside");
 
@@ -161,7 +184,7 @@ void Path_Test_RelativePathInside()
     TEST_END;
 }
 
-void Path_Test_RelativePathOutside()
+static void Path_Test_RelativePathOutside()
 {
     TEST_BEGIN("Path_Test_RelativePathOutside");
 
@@ -179,7 +202,7 @@ void Path_Test_RelativePathOutside()
     TEST_END;
 }
 
-void Program_Test_ParseCmdLine_SingleCmd()
+static void Program_Test_ParseCmdLine_SingleCmd()
 {
     TEST_BEGIN("Program_Test_ParseCmdLine_SingleCmd");
 
@@ -187,8 +210,8 @@ void Program_Test_ParseCmdLine_SingleCmd()
     TEST_TRUE(Program_ParseCmdLine(&programs, "cd /tmp"));
     TEST_EQ(Vector_Size(&programs), 1);
     Program * program = Vector_At(&programs, 0);
-    Vector * args = Program_GetArgs(program);
-    Program_Operator operator = Program_GetOperator(program);
+    Vector * args = Program_Args(program);
+    ProgramOperator operator = Program_Operator(program);
     TEST_EQ(Vector_Size(args), 2);
     TEST_STREQ(String_CharArray(Vector_At(args, 0)), "cd");
     TEST_STREQ(String_CharArray(Vector_At(args, 1)), "/tmp");
@@ -199,37 +222,37 @@ void Program_Test_ParseCmdLine_SingleCmd()
     TEST_END;
 }
 
-void Program_Test_ParseCmdLine_MultipleCmds()
+static void Program_Test_ParseCmdLine_MultipleCmds()
 {
     TEST_BEGIN("Program_Test_ParseCmdLine_MultipleCmds");
 
     Vector programs;
     Program * program;
     Vector * args;
-    Program_Operator operator;
+    ProgramOperator operator;
 
     TEST_TRUE(Program_ParseCmdLine(&programs, "cat test | grep bla & cd /tmp"));
     TEST_EQ(Vector_Size(&programs), 3);
 
     program = Vector_At(&programs, 0);
-    args = Program_GetArgs(program);
-    operator = Program_GetOperator(program);
+    args = Program_Args(program);
+    operator = Program_Operator(program);
     TEST_EQ(Vector_Size(args), 2);
     TEST_STREQ(String_CharArray(Vector_At(args, 0)), "cat");
     TEST_STREQ(String_CharArray(Vector_At(args, 1)), "test");
     TEST_EQ(operator, PROGRAM_OPERATOR_PIPE);
 
     program = Vector_At(&programs, 1);
-    args = Program_GetArgs(program);
-    operator = Program_GetOperator(program);
+    args = Program_Args(program);
+    operator = Program_Operator(program);
     TEST_EQ(Vector_Size(args), 2);
     TEST_STREQ(String_CharArray(Vector_At(args, 0)), "grep");
     TEST_STREQ(String_CharArray(Vector_At(args, 1)), "bla");
     TEST_EQ(operator, PROGRAM_OPERATOR_BACKGROUND);
 
     program = Vector_At(&programs, 2);
-    args = Program_GetArgs(program);
-    operator = Program_GetOperator(program);
+    args = Program_Args(program);
+    operator = Program_Operator(program);
     TEST_EQ(Vector_Size(args), 2);
     TEST_STREQ(String_CharArray(Vector_At(args, 0)), "cd");
     TEST_STREQ(String_CharArray(Vector_At(args, 1)), "/tmp");
@@ -240,7 +263,7 @@ void Program_Test_ParseCmdLine_MultipleCmds()
     TEST_END;
 }
 
-void Program_Test_ParseCmdLine_InvalidCmd()
+static void Program_Test_ParseCmdLine_InvalidCmd()
 {
     TEST_BEGIN("Program_Test_ParseCmdLine_InvalidCmd");
 
@@ -251,21 +274,18 @@ void Program_Test_ParseCmdLine_InvalidCmd()
     TEST_END;
 }
 
-void Shell_Test_Prompt()
+static void Shell_Test()
 {
-    TEST_BEGIN("Shell_Test_Prompt");
-
     Shell shell;
     Shell_Init(&shell);
-    Shell_Prompt(&shell);
+    for (;;) Shell_Prompt(&shell);
     Shell_Destroy(&shell);
-
-    TEST_END;
 }
 
 int main(int argc, char ** argv)
 {
     Vector_Test_Append();
+    Vector_Test_Remove();
     String_Test_AppendChar();
     String_Test_Split_Path();
     String_Test_Split_NoDelimiter();
@@ -277,6 +297,8 @@ int main(int argc, char ** argv)
     Program_Test_ParseCmdLine_SingleCmd();
     Program_Test_ParseCmdLine_MultipleCmds();
     Program_Test_ParseCmdLine_InvalidCmd();
-    Shell_Test_Prompt();
+
+    Shell_Test();
+
     return 0;
 }

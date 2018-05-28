@@ -8,7 +8,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define terminate() { fprintf(stderr, "Terminated at file: %s, line: %s\n", __FILE__, __LINE__); \
-    exit(EXIT_FAILURE); }
+#define terminate() fprintf(stderr, "Terminated at file: %s, line: %d\n", __FILE__, __LINE__), exit(EXIT_FAILURE);
+
+#define min(x, y) ((x) < (y) ? (x) : (y))
+
+#define max(x, y) ((x) > (y) ? (x) : (y))
+
+#define abs(x) ((x) < 0 ? -(x) : (x))
 
 #endif //REMOTESHELL_UTILS_H

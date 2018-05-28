@@ -4,8 +4,9 @@
 
 #include <string.h>
 #include "../../include/common/Path.h"
+#include "../../include/common/Utils.h"
 
-static void StringItemDestroyer(Vector_Item item)
+static void StringItemDestroyer(VectorItem item)
 {
     String_Destroy(item);
 }
@@ -78,7 +79,7 @@ size_t Path_Depth(Path * self)
 void Path_CommonPrefix(Path * self, Path * other, Path * commonPrefix)
 {
     Path_Init(commonPrefix);
-    for (size_t i = 0; i < Path_Depth(self); ++i)
+    for (size_t i = 0; i < min(Path_Depth(self), Path_Depth(other)); ++i)
     {
         String * selfDirName = Vector_At(self, i);
         String * otherDirName = Vector_At(other, i);

@@ -3,11 +3,15 @@
 //
 
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <errno.h>
 #include "../../include/common/String.h"
 
 const char NULL_CHAR = '\0';
 
-static void StringItemDestroyer(Vector_Item string)
+static void StringItemDestroyer(VectorItem string)
 {
     String_Destroy(string);
 }
@@ -15,7 +19,7 @@ static void StringItemDestroyer(Vector_Item string)
 void String_Init(String * self)
 {
     Vector_InitCharVector(self);
-    Vector_Append(self, (Vector_Item) &NULL_CHAR);
+    Vector_Append(self, (VectorItem) &NULL_CHAR);
 }
 
 void String_InitFromCharArray(String * self, const char * str)
@@ -23,8 +27,8 @@ void String_InitFromCharArray(String * self, const char * str)
     Vector_InitCharVector(self);
     size_t len = strlen(str);
     for (size_t i = 0; i < len; ++i)
-        Vector_Append(self, (Vector_Item) &str[i]);
-    Vector_Append(self, (Vector_Item) &NULL_CHAR);
+        Vector_Append(self, (VectorItem) &str[i]);
+    Vector_Append(self, (VectorItem) &NULL_CHAR);
 }
 
 void String_Destroy(String * self)
@@ -49,7 +53,7 @@ bool String_IsEmpty(String * self)
 
 char String_CharAt(String * self, size_t index)
 {
-    return Vector_Item2Char(Vector_At(self, index));
+    return VectorItem_ToChar(Vector_At(self, index));
 }
 
 const char * String_CharArray(String * self)
@@ -68,7 +72,7 @@ void String_AppendChar(String * self, char c)
 {
     char * end = Vector_At(self, String_Size(self));
     *end = c;
-    Vector_Append(self, (Vector_Item) &NULL_CHAR);
+    Vector_Append(self, (VectorItem) &NULL_CHAR);
 }
 
 void String_AppendCharArray(String * self, const char * chars)
@@ -88,7 +92,7 @@ void String_Split(String * self, char delimiter, Vector * split)
         char c = String_CharAt(self, i);
         if (c == delimiter)
         {
-            Vector_Append(split, (Vector_Item) &str);
+            Vector_Append(split, (VectorItem) &str);
             String_InitFromCharArray(&str, "");
         }
         else
@@ -96,10 +100,25 @@ void String_Split(String * self, char delimiter, Vector * split)
             String_AppendChar(&str, c);
         }
     }
-    Vector_Append(split, (Vector_Item) &str);
+    Vector_Append(split, (VectorItem) &str);
 }
 
 bool String_Equals(String * self, String * other)
 {
     return strcmp(String_CharArray(self), String_CharArray(other)) == 0;
+}
+
+bool String_ToInt(String * self, int * value)
+{
+    // TODO: All C standard implementations of this functionality seem to SUCK! Implement your own!
+    if (String_Size(self) == 1 && String_CharAt(self, 0) == '0')
+        return true;
+
+    char * end;
+    long l = strtol(String_CharArray(self), &end, 10);
+    if (l == 0 || l < INT_MIN || l > INT_MAX || errno == ERANGE)
+        return false;
+
+    *value = (int) l;
+    return true;
 }
