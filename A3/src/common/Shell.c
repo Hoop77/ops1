@@ -127,6 +127,7 @@ static void ShowPrompt(Shell * self)
     GetCwdPath(&cwd);
     Path_RelativePath(&self->initialCwd, &cwd, &relativePath);
     printf("%s> ", String_CharArray(&relativePath));
+    fflush(stdout);
 
     String_Destroy(&relativePath);
     Path_Destroy(&cwd);
@@ -196,6 +197,7 @@ static void ExecutePrograms(Shell * self, Vector * programs)
                 case PROGRAM_OPERATOR_BACKGROUND:
                     Vector_Append(&self->backgroundProcesses, &pid);
                     printf("[%d]\n", pid);
+                    fflush(stdout);
                     break;
 
                 case PROGRAM_OPERATOR_PIPE:
@@ -296,6 +298,7 @@ static void WaitFor(Vector * pids)
         if (returnedPid == sentinel)
         {
             printf("[wait canceled]\n");
+            fflush(stdout);
             break;
         }
 
@@ -318,6 +321,7 @@ static void WaitFor(Vector * pids)
 static void ShowProcessInfo(pid_t pid, int status)
 {
     printf("[%d] exited with status: %d\n", pid, status);
+    fflush(stdout);
 }
 
 static bool GetWaitPids(Shell * self, Vector * args, Vector * pids)

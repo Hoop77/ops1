@@ -1,0 +1,10 @@
+//
+// Created by philipp on 28.05.18.
+//
+
+#ifndef REMOTESHELL_REMOTESHELL_H
+#define REMOTESHELL_REMOTESHELL_H
+
+
+
+#endif //REMOTESHELL_REMOTESHELL_H

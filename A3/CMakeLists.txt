@@ -14,6 +14,7 @@ set(SOURCE_FILES
         include/common/Path.h
         include/common/Program.h
         include/common/Pipe.h
+        include/common/RemoteShell.h
         src/common/Vector.c
         src/common/Acceptor.c
         src/common/Socket.c
@@ -22,8 +23,11 @@ set(SOURCE_FILES
         src/common/String.c
         src/common/Path.c
         src/common/Program.c
-        src/common/Pipe.c)
+        src/common/Pipe.c
+        src/common/RemoteShell.c)
 
-add_executable(RemoteShell ${SOURCE_FILES} srv/server.h srv/server.c )
+add_executable(Server ${SOURCE_FILES} srv/server.h srv/server.c)
+
+add_executable(Client ${SOURCE_FILES} cli/client.c cli/client.h)
 
 add_executable(Test ${SOURCE_FILES} test/TestFramework.h test/Test.c)

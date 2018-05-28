@@ -9,7 +9,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-bool Socket_Connect(const char * host, Socket_Port port, Socket * sock)
+bool Socket_Connect(Socket * sock, const char * host, Socket_Port port)
 {
     struct sockaddr_in address = {
         .sin_family = AF_INET,
@@ -22,4 +22,6 @@ bool Socket_Connect(const char * host, Socket_Port port, Socket * sock)
 
     if (connect(*sock, (struct sockaddr*) &address, sizeof(address)) < 0)
         return false;
+
+    return true;
 }

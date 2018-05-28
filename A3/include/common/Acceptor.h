@@ -8,16 +8,9 @@
 #include <stdbool.h>
 #include "Socket.h"
 
-typedef struct
-{
-    Socket socket;
-    const char * bindAddress;
-    Socket_Port port;
-} Acceptor;
+typedef Socket Acceptor;
 
-void Acceptor_Init(Acceptor * self, const char * bindAddress, Socket_Port port);
-
-bool Acceptor_Open(Acceptor * self);
+bool Acceptor_Open(Acceptor * self, Socket_Port port);
 
 bool Acceptor_Accept(Acceptor * self, Socket * socket);
 

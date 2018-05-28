@@ -9,19 +9,13 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-void Acceptor_Init(Acceptor * self, const char * bindAddress, Socket_Port port)
-{
-    self->bindAddress = bindAddress;
-    self->port = port;
-}
-
-bool Acceptor_Open(Acceptor * self)
+bool Acceptor_Open(Acceptor * self, Socket_Port port)
 {
     struct sockaddr_in address;
     Socket sock;
 
     address.sin_family = AF_INET;
-    address.sin_port = htons(self->port);
+    address.sin_port = htons(port);
     address.sin_addr.s_addr = INADDR_ANY;
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -33,7 +27,7 @@ bool Acceptor_Open(Acceptor * self)
     if (listen(sock, 1) < 0)
         return false;
 
-    self->socket = sock;
+    *self = sock;
     return true;
 }
 
@@ -41,7 +35,7 @@ bool Acceptor_Accept(Acceptor * self, Socket * socket)
 {
     struct sockaddr_in address;
     socklen_t len;
-    *socket = accept(self->socket, (struct sockaddr*) &address, &len);
+    *socket = accept(*self, (struct sockaddr*) &address, &len);
     if (*socket < 0)
         return false;
     return true;
@@ -49,5 +43,5 @@ bool Acceptor_Accept(Acceptor * self, Socket * socket)
 
 void Acceptor_Close(Acceptor * self)
 {
-    close(self->socket);
+    close(*self);
 }

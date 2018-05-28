@@ -11,6 +11,6 @@
 typedef int Socket;
 typedef uint16_t Socket_Port;
 
-bool Socket_Connect(const char * host, Socket_Port port, Socket * sock);
+bool Socket_Connect(Socket * sock, const char * host, Socket_Port port);
 
 #endif //REMOTE_SHELL_NETWORK_H
