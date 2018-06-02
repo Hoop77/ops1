@@ -60,6 +60,33 @@ static void Vector_Test_Remove()
     TEST_END;
 }
 
+static void Vector_Test_Insert()
+{
+    TEST_BEGIN("Vector_Test_Insert");
+
+    Vector vector;
+    Vector_InitIntVector(&vector);
+    int x;
+    x = 1;
+    Vector_Append(&vector, &x);
+    x = 3;
+    Vector_Append(&vector, &x);
+    x = 2;
+    Vector_Insert(&vector, &x, 1);
+    TEST_EQ(Vector_Size(&vector), 3);
+
+    x = VectorItem_ToInt(Vector_At(&vector, 0));
+    TEST_EQ(x, 1);
+    x = VectorItem_ToInt(Vector_At(&vector, 1));
+    TEST_EQ(x, 2);
+    x = VectorItem_ToInt(Vector_At(&vector, 2));
+    TEST_EQ(x, 3);
+
+    Vector_Destroy(&vector);
+
+    TEST_END;
+}
+
 static void String_Test_AppendChar()
 {
     TEST_BEGIN("String_Test_AppendChar");
@@ -286,6 +313,7 @@ int main(int argc, char ** argv)
 {
     Vector_Test_Append();
     Vector_Test_Remove();
+    Vector_Test_Insert();
     String_Test_AppendChar();
     String_Test_Split_Path();
     String_Test_Split_NoDelimiter();

@@ -89,6 +89,21 @@ void Vector_Remove(Vector * self, size_t index)
     }
 }
 
+void Vector_Insert(Vector * self, VectorItem item, size_t index)
+{
+    self->size++;
+    if (self->size > self->capacity)
+    {
+        self->capacity *= 2;
+        REALLOC(self);
+    }
+
+    for (size_t i = index; i < self->size - 1; ++i)
+        COPY_TO_INDEX(self, ITEM_ADDR(self, i), i + 1);
+
+    COPY_TO_INDEX(self, item, index);
+}
+
 VectorItem Vector_At(Vector * self, size_t index)
 {
     return ITEM_ADDR(self, index);

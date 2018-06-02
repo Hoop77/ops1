@@ -46,6 +46,8 @@ void Vector_Append(Vector * self, VectorItem item);
 
 void Vector_Remove(Vector * self, size_t index);
 
+void Vector_Insert(Vector * self, VectorItem item, size_t index);
+
 VectorItem Vector_At(Vector * self, size_t index);
 
 size_t Vector_Size(Vector * self);
