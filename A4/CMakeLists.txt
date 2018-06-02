@@ -15,6 +15,8 @@ set(SOURCE_FILES
         include/common/Pipe.h
         include/common/RemoteShell.h
         include/common/Reader.h
+        include/common/Array.h
+        include/ult/Ult.h
         src/common/Vector.c
         src/common/Acceptor.c
         src/common/Socket.c
@@ -25,10 +27,10 @@ set(SOURCE_FILES
         src/common/Pipe.c
         src/common/RemoteShell.c
         src/common/Utils.c
-        src/common/Reader.c)
-
-add_executable(Server ${SOURCE_FILES} include/srv/server.h src/srv/server.c)
-
-add_executable(Client ${SOURCE_FILES} src/cli/client.c include/cli/client.h)
+        src/common/Reader.c
+        src/common/Array.c
+        src/ult/Ult.c)
 
 add_executable(Test ${SOURCE_FILES} test/TestFramework.h test/Test.c)
+
+add_executable(UltTest ${SOURCE_FILES} test/UltTest.c)

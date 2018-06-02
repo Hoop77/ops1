@@ -3,7 +3,7 @@
 #include <fcntl.h>
 #include <time.h>
 
-#include "ult.h"
+#include "../include/ult/Ult.h"
 
 static void threadA()
 {

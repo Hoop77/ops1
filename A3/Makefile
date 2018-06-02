@@ -33,7 +33,7 @@ run: all
 	$(RM) $(RMFILES) .srv_pid
 
 pack: clean
-	zip -r $(PCK) cli srv src include Makefile -x "*/.*"
+	zip -r $(PCK) src include Makefile -x "*/.*"
 
 clean:
 	$(RM) $(RMFILES) $(CLIENT_OBJ) $(SERVER_OBJ) $(COMMON_OBJ) $(TAR) $(PCK)

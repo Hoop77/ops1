@@ -1,5 +1,5 @@
-#include "ult.h"
-#include "array.h"
+#include "../../include/ult/Ult.h"
+#include "../../include/common/Array.h"
 
 #include <stdio.h>
 #include <stdlib.h>

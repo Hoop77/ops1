@@ -4,7 +4,7 @@
  * @brief Implementation des generalisierten Arrays.
  ******************************************************************************/
 
-#include "array.h"
+#include "../../include/common/Array.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
