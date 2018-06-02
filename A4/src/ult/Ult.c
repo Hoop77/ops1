@@ -1,15 +1,9 @@
 #include "../../include/ult/Ult.h"
-#include "../../include/common/Array.h"
 #include "../../include/common/Vector.h"
 #include "../../include/common/Utils.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-
 #define _XOPEN_SOURCE
+
 #include <ucontext.h>
 #include <assert.h>
 
@@ -20,15 +14,15 @@
 /* thread control block */
 typedef struct
 {
-	int id;
+    int id;
     ucontext_t context;
     char stack[STACK_SIZE];
     int status;
-} ThreadControlBlock;
+} Thread;
 
 typedef struct
 {
-    // Vector of ThreadControlBlock
+    // Vector of Thread
     Vector threads;
     // Vector of size_t
     Vector aliveIndices;
@@ -40,32 +34,74 @@ typedef struct
 
 static Scheduler scheduler;
 
-static void Scheduler_ReturnToMainContext(Scheduler * self)
+static void ThreadItemDestroyer(VectorItem item);
+
+static void Thread_Init(Thread * self, ult_f f);
+
+static void Thread_Destroy(Thread * self);
+
+static void Scheduler_Init(Scheduler * self);
+
+static void Scheduler_ReturnToMainContext(Scheduler * self);
+
+Thread * Scheduler_NewThread(Scheduler * self, ult_f f);
+
+static Thread * Scheduler_FindThread(Scheduler * self, int threadId, bool * alive);
+
+void Scheduler_ScheduleNext(Scheduler * self);
+
+void Scheduler_ExitCurrThread(Scheduler * self, int status);
+
+void ult_init(ult_f f)
 {
-    Vector_Destroy(&scheduler.threads);
-    Vector_Destroy(&scheduler.aliveIndices);
-    Vector_Destroy(&scheduler.zombieIndices);
-    setcontext(&scheduler.mainContext);
-    // if setcontext fails, the function returns
-    terminate();
+    Scheduler_Init(&scheduler);
+    Thread * initThread = Scheduler_NewThread(&scheduler, f);
+    swapcontext(&scheduler.mainContext, &initThread->context);
 }
 
-static void ThreadControlBlock_Destroy(ThreadControlBlock * self)
+int ult_spawn(ult_f f)
 {
-    // nothing to do
+    return Scheduler_NewThread(&scheduler, f)->id;
 }
 
-static void ThreadControlBlockItemDestroyer(VectorItem * item)
+void ult_yield()
 {
-    ThreadControlBlock_Destroy(item);
+    Scheduler_ScheduleNext(&scheduler);
 }
 
-static void PrimitiveItemDestroyer()
+void ult_exit(int status)
 {
-    // nothing to do
+    Scheduler_ExitCurrThread(&scheduler, status);
 }
 
-static void ThreadControlBlock_Init(ThreadControlBlock * self, ult_f f)
+int ult_join(int tid, int * status)
+{
+    for (;;)
+    {
+        bool alive;
+        Thread * thread = Scheduler_FindThread(&scheduler, tid, &alive);
+        if (!thread)
+            return -1;
+
+        if (!alive)
+            return 0;
+
+        Scheduler_ScheduleNext(&scheduler);
+    }
+}
+
+ssize_t ult_read(int fd, void * buf, size_t size)
+{
+    // TODO: implementation
+    return 0;
+}
+
+static void ThreadItemDestroyer(VectorItem item)
+{
+    Thread_Destroy((Thread *) item);
+}
+
+static void Thread_Init(Thread * self, ult_f f)
 {
     static int currId = 0;
     self->id = currId++;
@@ -79,80 +115,107 @@ static void ThreadControlBlock_Init(ThreadControlBlock * self, ult_f f)
     self->status = 0;
 }
 
+static void Thread_Destroy(Thread * self)
+{
+    // nothing to do
+}
+
 static void Scheduler_Init(Scheduler * self)
 {
-    Vector_Init(&scheduler.threads, sizeof(Scheduler), ThreadControlBlockItemDestroyer);
-    Vector_Init(&scheduler.aliveIndices, sizeof(size_t), PrimitiveItemDestroyer);
-    Vector_Init(&scheduler.zombieIndices, sizeof(size_t), PrimitiveItemDestroyer);
+    Vector_Init(&scheduler.threads, sizeof(Scheduler), ThreadItemDestroyer);
+    Vector_Init(&scheduler.aliveIndices, sizeof(size_t), NULL);
+    Vector_Init(&scheduler.zombieIndices, sizeof(size_t), NULL);
     scheduler.currThreadPos = 0;
 }
 
-void ult_init(ult_f f)
+Thread * Scheduler_NewThread(Scheduler * self, ult_f f)
 {
-    Scheduler_Init(&scheduler);
-
-    ThreadControlBlock initThread;
-    ThreadControlBlock_Init(&initThread, f);
-
-    size_t threadIndex = Vector_Size(&scheduler.threads);
-    Vector_Append(&scheduler.threads, &initThread);
-    Vector_Append(&scheduler.aliveIndices, threadIndex);
-
-    swapcontext(&scheduler.mainContext, &initThread.context);
-}
-
-int ult_spawn(ult_f f)
-{
-    ThreadControlBlock thread;
-    ThreadControlBlock_Init(&thread, f);
+    Thread thread;
+    Thread_Init(&thread, f);
 
     size_t threadIndex = Vector_Size(&scheduler.threads);
     Vector_Append(&scheduler.threads, &thread);
     Vector_Insert(&scheduler.aliveIndices, &threadIndex, scheduler.currThreadPos++);
 
-	return thread.id;
+    return Vector_At(&self->threads, Vector_Size(&self->threads) - 1);
 }
 
-void ult_yield()
-{
-    assert(Vector_Size(&scheduler.aliveIndices) != 0);
-
-    if (Vector_Size(&scheduler.aliveIndices) == 1)
-        return;
-
-    size_t currThreadPos = scheduler.currThreadPos;
-    size_t nextThreadPos = (currThreadPos + 1) % Vector_Size(&scheduler.aliveIndices);
-
-    size_t currThreadIndex = VectorItem_ToSize_t(Vector_At(&scheduler.aliveIndices, currThreadPos));
-    size_t nextThreadIndex = VectorItem_ToSize_t(Vector_At(&scheduler.aliveIndices, nextThreadPos));
-
-    ucontext_t * currContext = Vector_At(&scheduler.threads, currThreadIndex);
-    ucontext_t * nextContext = Vector_At(&scheduler.threads, nextThreadIndex);
-
-    scheduler.currThreadPos = nextThreadPos;
-    swapcontext(currContext, nextContext);
-}
-
-void ult_exit(int status)
+void Scheduler_ExitCurrThread(Scheduler * self, int status)
 {
     if (Vector_Size(&scheduler.threads) == 1)
         Scheduler_ReturnToMainContext(&scheduler);
 
-    size_t currThreadIndex = scheduler.currThreadPos;
-    ThreadControlBlock * currThread = Vector_At(&scheduler.threads, currThreadIndex);
-    Vector_Append(&scheduler.zombies, currThread);
-    Vector_Remove(&scheduler.threads, currThreadIndex);
-    scheduler.currThreadPos = currThreadIndex % Vector_Size(&scheduler.threads);
-    ThreadControlBlock * nextThread = Vector_At(&scheduler.threads, scheduler.currThreadPos);
+    size_t currThreadPos = scheduler.currThreadPos;
+    size_t currThreadIndex = VectorItem_ToSize_t(Vector_At(&scheduler.aliveIndices, currThreadPos));
+    Thread * currThread = Vector_At(&self->threads, currThreadIndex);
+
+    currThread->status = status;
+
+    Vector_Append(&scheduler.zombieIndices, &currThreadIndex);
+    Vector_Remove(&scheduler.aliveIndices, currThreadPos);
+
+    size_t nextThreadPos = currThreadPos % Vector_Size(&scheduler.aliveIndices);
+    size_t nextThreadIndex = VectorItem_ToSize_t(Vector_At(&scheduler.aliveIndices, nextThreadPos));
+    Thread * nextThread = Vector_At(&scheduler.threads, nextThreadIndex);
+
+    scheduler.currThreadPos = nextThreadPos;
     setcontext(&nextThread->context);
 }
 
-int ult_join(int tid, int* status)
+static void Scheduler_ReturnToMainContext(Scheduler * self)
 {
-	return -1;
+    Vector_Destroy(&scheduler.threads);
+    Vector_Destroy(&scheduler.aliveIndices);
+    Vector_Destroy(&scheduler.zombieIndices);
+    setcontext(&scheduler.mainContext);
+    // if setcontext fails, the function returns
+    terminate();
 }
 
-ssize_t ult_read(int fd, void* buf, size_t size)
+static Thread * Scheduler_FindThread(Scheduler * self, int threadId, bool * alive)
 {
-	return 0;
+    Thread * thread;
+    size_t * index;
+
+    Vector_ForeachBegin(&scheduler.aliveIndices, index, i)
+        thread = Vector_At(&scheduler.threads, *index);
+        if (thread->id == threadId)
+        {
+            if (alive)
+                *alive = true;
+            return thread;
+        }
+    Vector_ForeachEnd
+
+    Vector_ForeachBegin(&scheduler.zombieIndices, index, j)
+        thread = Vector_At(&scheduler.threads, *index);
+        if (thread->id == threadId)
+        {
+            if (alive)
+                *alive = false;
+            return thread;
+        }
+    Vector_ForeachEnd
+
+    return NULL;
+}
+
+void Scheduler_ScheduleNext(Scheduler * self)
+{
+    assert(Vector_Size(&scheduler.aliveIndices) != 0);
+
+    size_t currThreadPos = self->currThreadPos;
+    size_t nextThreadPos = (currThreadPos + 1) % Vector_Size(&self->aliveIndices);
+
+    if (currThreadPos == nextThreadPos)
+        return;
+
+    size_t currThreadIndex = VectorItem_ToSize_t(Vector_At(&self->aliveIndices, currThreadPos));
+    size_t nextThreadIndex = VectorItem_ToSize_t(Vector_At(&self->aliveIndices, nextThreadPos));
+
+    Thread * currThread = Vector_At(&self->threads, currThreadIndex);
+    Thread * nextThread = Vector_At(&self->threads, nextThreadIndex);
+
+    self->currThreadPos = nextThreadPos;
+    swapcontext(&currThread->context, &nextThread->context);
 }

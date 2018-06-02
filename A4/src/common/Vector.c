@@ -89,6 +89,14 @@ void Vector_Remove(Vector * self, size_t index)
     }
 }
 
+void Vector_RemoveAndDestroy(Vector * self, size_t index)
+{
+    if (self->destroyer)
+        self->destroyer(ITEM_ADDR(self, index));
+
+    Vector_Remove(self, index);
+}
+
 void Vector_Insert(Vector * self, VectorItem item, size_t index)
 {
     self->size++;
