@@ -19,9 +19,13 @@
 
 void Vector_Init(Vector * self, size_t itemSize, VectorItemDestroyer destroyer)
 {
-    memset(self, 0, sizeof(Vector));
+    self->size = 0;
     self->itemSize = itemSize;
     self->destroyer = destroyer;
+    self->items = malloc(self->itemSize);
+    if (!self->items)
+        terminate();
+    self->capacity = 1;
 }
 
 void Vector_InitCharVector(Vector * self)
@@ -58,13 +62,6 @@ void Vector_Copy(Vector * self, Vector * copy)
 void Vector_Append(Vector * self, VectorItem item)
 {
     size_t insertIndex = self->size;
-    if (self->size == 0)
-    {
-        self->items = malloc(self->itemSize);
-        if (!self->items)
-            terminate();
-        self->capacity = 1;
-    }
 
     if (self->size == self->capacity)
     {

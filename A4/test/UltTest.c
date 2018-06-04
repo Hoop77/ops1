@@ -7,11 +7,13 @@
 
 static void threadA()
 {
+    printf("A runs\n");
 	ult_exit(0);
 }
 
 static void threadB()
 {
+    printf("B runs\n");
 	ult_exit(0);
 }
 

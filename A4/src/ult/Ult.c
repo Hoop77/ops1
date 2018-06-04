@@ -16,7 +16,7 @@ typedef struct
 {
     int id;
     ucontext_t context;
-    char stack[STACK_SIZE];
+    char * stack;
     int status;
 } Thread;
 
@@ -84,7 +84,10 @@ int ult_join(int tid, int * status)
             return -1;
 
         if (!alive)
+        {
+            *status = thread->status;
             return 0;
+        }
 
         Scheduler_ScheduleNext(&scheduler);
     }
@@ -105,6 +108,9 @@ static void Thread_Init(Thread * self, ult_f f)
 {
     static int currId = 0;
     self->id = currId++;
+    self->stack = malloc(STACK_SIZE);
+    if (!self->stack)
+        terminate();
     ucontext_t * context = &self->context;
     getcontext(context);
     context->uc_link = 0;
@@ -117,7 +123,7 @@ static void Thread_Init(Thread * self, ult_f f)
 
 static void Thread_Destroy(Thread * self)
 {
-    // nothing to do
+    free(self->stack);
 }
 
 static void Scheduler_Init(Scheduler * self)
@@ -135,7 +141,12 @@ Thread * Scheduler_NewThread(Scheduler * self, ult_f f)
 
     size_t threadIndex = Vector_Size(&scheduler.threads);
     Vector_Append(&scheduler.threads, &thread);
-    Vector_Insert(&scheduler.aliveIndices, &threadIndex, scheduler.currThreadPos++);
+
+    if (Vector_IsEmpty(&scheduler.aliveIndices))
+        Vector_Append(&scheduler.aliveIndices, &threadIndex);
+    else
+        Vector_Insert(&scheduler.aliveIndices, &threadIndex, scheduler.currThreadPos++);
+
 
     return Vector_At(&self->threads, Vector_Size(&self->threads) - 1);
 }
@@ -150,6 +161,7 @@ void Scheduler_ExitCurrThread(Scheduler * self, int status)
     Thread * currThread = Vector_At(&self->threads, currThreadIndex);
 
     currThread->status = status;
+    free(currThread->stack);
 
     Vector_Append(&scheduler.zombieIndices, &currThreadIndex);
     Vector_Remove(&scheduler.aliveIndices, currThreadPos);
