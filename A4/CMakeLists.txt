@@ -34,3 +34,5 @@ set(SOURCE_FILES
 add_executable(Test ${SOURCE_FILES} test/TestFramework.h test/Test.c)
 
 add_executable(UltTest ${SOURCE_FILES} test/UltTest.c)
+
+add_executable(TestServer ${SOURCE_FILES} test/TestServer.c)
