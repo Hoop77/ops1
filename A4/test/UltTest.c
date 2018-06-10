@@ -67,7 +67,7 @@ static void threadClient()
 
 static void myInit()
 {
-	int tids[3], i, status;
+	int tids[5], i, status;
 
 	printf("spawn first Client\n");
 	tids[0] = ult_spawn(threadClient);

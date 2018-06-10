@@ -34,7 +34,11 @@ int main(int argc, char ** argv)
 
 		sleep(3);
 		char msg[] = "Hallo World!";
-		write(socket, msg, strlen(msg) + 1);
+		if (write(socket, msg, strlen(msg) + 1) < 0)
+		{
+			perror("write failed");
+			exit(-1);
+		}
 		close(socket);
 		sleep(1);
 		exit(0);
