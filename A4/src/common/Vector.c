@@ -103,8 +103,12 @@ void Vector_Insert(Vector * self, VectorItem item, size_t index)
         REALLOC(self);
     }
 
-    for (size_t i = index; i < self->size - 1; ++i)
+    size_t i = self->size - 1;
+    while (i > index)
+    {
+        i--;
         COPY_TO_INDEX(self, ITEM_ADDR(self, i), i + 1);
+    }
 
     COPY_TO_INDEX(self, item, index);
 }

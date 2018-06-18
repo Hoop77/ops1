@@ -24,8 +24,8 @@ typedef struct
 
 #define Vector_ForeachBegin(self, item, iterator) \
         VectorIterator iterator; \
-        for (iterator = 0; i < Vector_Size(self); ++iterator) \
-        { item = Vector_At(self, iterator);
+        for ((iterator) = 0; (iterator) < Vector_Size(self); ++(iterator)) \
+        { (item) = Vector_At(self, iterator);
 
 #define Vector_ForeachEnd }
 
