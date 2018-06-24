@@ -7,6 +7,8 @@
 #include "../../include/common/Vector.h"
 #include "../../include/common/Utils.h"
 
+#define MIN_CREDIT_BALANCE 100
+
 typedef struct {
 	int inPostings;
 	int outPostings;
@@ -16,7 +18,7 @@ typedef struct {
 typedef struct
 {
 	Vector taxCollectors;
-	// mutexes...
+	pthread_mutex_t lock;
 } SimulationContext;
 
 typedef struct TaxCollector_s
@@ -25,6 +27,7 @@ typedef struct TaxCollector_s
 	CollectorData data;
 	unsigned int seed;
 	struct TaxCollector_s * waitTaxCollector;
+	pthread_cond_t minCreditBalanceCondition;
 } TaxCollector;
 
 static void StartSimulation(double duration, int collectors, int funds);
@@ -115,28 +118,33 @@ static void StartSimulation(double duration, int collectors, int funds)
 		Vector_Append(&simulationContext.taxCollectors, &taxCollector);
 	}
 
-	for (int i = 0; i < collectors; ++i)
-	{
+	pthread_mutex_lock(&simulationContext.lock);
+	TaxCollector * taxCollector;
+	Vector_ForeachBegin(&taxCollectors, taxCollector, i)
 		pthread_t thread;
-		if (pthread_create(&thread, NULL, TaxCollector_Run, Vector_At(&taxCollectors, (size_t) i)) != 0)
+		if (pthread_create(&thread, NULL, TaxCollector_Run, taxCollector) != 0)
 			terminate();
 		Vector_Append(&threads, &thread);
-	}
+	Vector_ForeachEnd
+	pthread_mutex_unlock(&simulationContext.lock);
 
-	for (int i = 0; i < collectors; ++i)
-	{
-		pthread_t * thread = Vector_At(&threads, (size_t) i);
+	usleep((useconds_t) (duration * 1000000.0));
+
+	pthread_t * thread;
+	Vector_ForeachBegin(&threads, thread, j)
 		void * ret;
+		pthread_cancel(*thread);
 		pthread_join(*thread, &ret);
-	}
+    Vector_ForeachEnd
 
+	Vector_Destroy(&taxCollectors);
 	Vector_Destroy(&threads);
 }
 
 static void SimulationContext_Init(SimulationContext * self)
 {
 	Vector_Init(&self->taxCollectors, sizeof(TaxCollector), NULL);
-	// TODO: initialize mutexes
+	pthread_mutex_init(&self->lock, NULL);
 }
 
 static void TaxCollector_Init(TaxCollector * self, SimulationContext * context, int initialCreditBalance)
@@ -146,24 +154,46 @@ static void TaxCollector_Init(TaxCollector * self, SimulationContext * context, 
 	self->data.outPostings = 0;
 	self->data.creditBalance = initialCreditBalance;
 	self->waitTaxCollector = NULL;
+	pthread_cond_init(&self->minCreditBalanceCondition, NULL);
 }
 
 static void * TaxCollector_Run(void * arg)
 {
 	TaxCollector * me = arg;
 	Vector * collectors = &me->context->taxCollectors;
+	SimulationContext * context = me->context;
+	int oldState;   // for pthread_setcancelstate
 
 	me->seed = GenerateSeed();
 
 	for (;;)
 	{
-		size_t randomIndex = Random(me->seed, (unsigned long) Vector_Size(collectors));
-		TaxCollector * randomCollector = Vector_At(collectors, randomIndex);
-		if (randomCollector == me)
+		size_t randomIndex = Random(&me->seed, (unsigned long) Vector_Size(collectors));
+		TaxCollector * otherCollector = Vector_At(collectors, randomIndex);
+		// retry when unlucky
+		if (otherCollector == me)
 			continue;
 
-		// TODO: lock section
-		bool result = CheckDependencies(me, randomCollector);
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldState);
+		pthread_mutex_lock(&context->lock);
+		bool result = CheckDependencies(me, otherCollector);
+		if (result)
+		{
+			if (otherCollector->data.creditBalance < MIN_CREDIT_BALANCE)
+				pthread_cond_wait(&otherCollector->minCreditBalanceCondition, &context->lock);
+
+			int transferSize = otherCollector->data.creditBalance / 2;
+			otherCollector->data.creditBalance -= transferSize;
+			otherCollector->data.outPostings += transferSize;
+
+			me->data.creditBalance += transferSize;
+			me->data.inPostings += transferSize;
+
+			if (me->data.creditBalance >= MIN_CREDIT_BALANCE)
+				pthread_cond_signal(&me->minCreditBalanceCondition);
+		}
+		pthread_mutex_unlock(&context->lock);
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldState);
 	}
 }
 
