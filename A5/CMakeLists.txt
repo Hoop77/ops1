@@ -31,11 +31,12 @@ set(SOURCE_FILES
         src/common/Utils.c
         src/common/Reader.c
         src/common/Array.c
-        src/ult/Ult.c
-        src/tcd/tcd.c)
+        src/ult/Ult.c)
 
 add_executable(Test ${SOURCE_FILES} test/TestFramework.h test/Test.c)
 
 add_executable(UltTest ${SOURCE_FILES} test/UltTest.c)
 
 add_executable(TestServer ${SOURCE_FILES} test/TestServer.c)
+
+add_executable(Tcd ${SOURCE_FILES} src/tcd/tcd.c)

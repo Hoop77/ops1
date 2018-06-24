@@ -23,6 +23,7 @@ typedef struct TaxCollector_s
 {
 	SimulationContext * context;
 	CollectorData data;
+	unsigned int seed;
 	struct TaxCollector_s * waitTaxCollector;
 } TaxCollector;
 
@@ -33,6 +34,12 @@ static void SimulationContext_Init(SimulationContext * self);
 static void TaxCollector_Init(TaxCollector * self, SimulationContext * context, int initialCreditBalance);
 
 static void * TaxCollector_Run(void * arg);
+
+static bool CheckDependencies(TaxCollector * from, TaxCollector * to);
+
+static unsigned int GenerateSeed();
+
+static unsigned long Random(unsigned int * seed, unsigned long max);
 
 int main(int argc, const char* argv[])
 {
@@ -90,7 +97,7 @@ int main(int argc, const char* argv[])
 	return 0;
 }
 
-void StartSimulation(double duration, int collectors, int funds)
+static void StartSimulation(double duration, int collectors, int funds)
 {
 	Vector threads;
 	Vector_Init(&threads, sizeof(pthread_t), NULL);
@@ -111,7 +118,7 @@ void StartSimulation(double duration, int collectors, int funds)
 	for (int i = 0; i < collectors; ++i)
 	{
 		pthread_t thread;
-		if (pthread_create(&thread, NULL, TaxCollector_Run, &simulationContext) != 0)
+		if (pthread_create(&thread, NULL, TaxCollector_Run, Vector_At(&taxCollectors, (size_t) i)) != 0)
 			terminate();
 		Vector_Append(&threads, &thread);
 	}
@@ -126,13 +133,13 @@ void StartSimulation(double duration, int collectors, int funds)
 	Vector_Destroy(&threads);
 }
 
-void SimulationContext_Init(SimulationContext * self)
+static void SimulationContext_Init(SimulationContext * self)
 {
 	Vector_Init(&self->taxCollectors, sizeof(TaxCollector), NULL);
 	// TODO: initialize mutexes
 }
 
-void TaxCollector_Init(TaxCollector * self, SimulationContext * context, int initialCreditBalance)
+static void TaxCollector_Init(TaxCollector * self, SimulationContext * context, int initialCreditBalance)
 {
 	self->context = context;
 	self->data.inPostings = 0;
@@ -141,7 +148,41 @@ void TaxCollector_Init(TaxCollector * self, SimulationContext * context, int ini
 	self->waitTaxCollector = NULL;
 }
 
-void * TaxCollector_Run(void * arg)
+static void * TaxCollector_Run(void * arg)
 {
+	TaxCollector * me = arg;
+	Vector * collectors = &me->context->taxCollectors;
 
+	me->seed = GenerateSeed();
+
+	for (;;)
+	{
+		size_t randomIndex = Random(me->seed, (unsigned long) Vector_Size(collectors));
+		TaxCollector * randomCollector = Vector_At(collectors, randomIndex);
+		if (randomCollector == me)
+			continue;
+
+		// TODO: lock section
+		bool result = CheckDependencies(me, randomCollector);
+	}
+}
+
+static unsigned int GenerateSeed()
+{
+	return (unsigned int) time(NULL) ^ getpid() ^ (unsigned int) pthread_self();
+}
+
+static bool CheckDependencies(TaxCollector * from, TaxCollector * to)
+{
+	if (to->waitTaxCollector == NULL)
+		return true;
+	else if (to->waitTaxCollector == from)
+		return false;
+	else
+		return CheckDependencies(from, to->waitTaxCollector);
+}
+
+static unsigned long Random(unsigned int * seed, unsigned long max)
+{
+	return (unsigned long) (rand_r(seed) / (RAND_MAX + 1.0) * max);
 }
