@@ -229,7 +229,7 @@ static unsigned int GenerateSeed()
 
 static bool CheckDependencies(TaxCollector * from, TaxCollector * to)
 {
-	if (to->waitTaxCollector == NULL)
+	if (to->waitTaxCollector == NULL || to->data.creditBalance >= MIN_CREDIT_BALANCE)
 		return true;
 	else if (to->waitTaxCollector == from)
 		return false;
