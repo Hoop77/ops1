@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <assert.h>
 #include "../../include/common/Vector.h"
 #include "../../include/common/Utils.h"
 
@@ -18,6 +19,7 @@ typedef struct
 {
 	Vector taxCollectors;
 	pthread_mutex_t lock;
+	bool running;
 } SimulationContext;
 
 typedef struct TaxCollector_s
@@ -25,10 +27,11 @@ typedef struct TaxCollector_s
 	SimulationContext * context;
 	CollectorData data;
 	unsigned int seed;
-	struct TaxCollector_s * waitTaxCollector;
-	pthread_cond_t minCreditBalanceCondition;
+	struct TaxCollector_s * other;
 	// for debugging / TODO: remove this!
 	int id;
+	// for finding cycles;
+	bool visited;
 } TaxCollector;
 
 static void StartSimulation(double duration, int collectors, int funds);
@@ -45,13 +48,21 @@ static void TaxCollectorItemDestroyer(VectorItem item);
 
 static void * TaxCollector_Run(void * arg);
 
-static bool CheckDependencies(TaxCollector * from, TaxCollector * to);
+static void * DependencyChecker_Run(void * arg);
 
 static unsigned int GenerateSeed();
 
 static unsigned long Random(unsigned int * seed, unsigned long max);
 
 static void printResults(Vector * taxCollectors);
+
+static void printCurrState(SimulationContext * context);
+
+static void PrepareCycleDetection(Vector * taxCollectors);
+
+static TaxCollector * DetectCycle(TaxCollector * collector);
+
+static TaxCollector * FindSuitableTaxCollector(SimulationContext * context, TaxCollector * self);
 
 int main(int argc, const char * argv[])
 {
@@ -117,12 +128,20 @@ static void StartSimulation(double duration, int collectors, int funds)
 	Vector_ForeachEnd
 	pthread_mutex_unlock(&simulationContext.lock);
 
+	pthread_t dependencyCheckerThread;
+	if (pthread_create(&dependencyCheckerThread, NULL, DependencyChecker_Run, &simulationContext) != 0)
+		terminate();
+	Vector_Append(&threads, &dependencyCheckerThread);
+
 	usleep((useconds_t) (duration * 1000000.0));
+
+	printf("\nStopping simulation!\n");
+
+	simulationContext.running = false;
 
 	pthread_t * thread;
 	Vector_ForeachBegin(&threads, thread, j)
 		void * ret;
-		pthread_cancel(*thread);
 		pthread_join(*thread, &ret);
 	Vector_ForeachEnd
 
@@ -136,6 +155,7 @@ static void SimulationContext_Init(SimulationContext * self)
 {
 	Vector_Init(&self->taxCollectors, sizeof(TaxCollector), TaxCollectorItemDestroyer);
 	pthread_mutex_init(&self->lock, NULL);
+	self->running = true;
 }
 
 static void SimulationContext_Destroy(SimulationContext * self)
@@ -150,13 +170,13 @@ static void TaxCollector_Init(TaxCollector * self, SimulationContext * context, 
 	self->data.inPostings = 0;
 	self->data.outPostings = 0;
 	self->data.creditBalance = initialCreditBalance;
-	self->waitTaxCollector = NULL;
-	pthread_cond_init(&self->minCreditBalanceCondition, NULL);
+	self->other = NULL;
+	self->visited = false;
 }
 
 static void TaxCollector_Destroy(TaxCollector * self)
 {
-	pthread_cond_destroy(&self->minCreditBalanceCondition);
+
 }
 
 static void TaxCollectorItemDestroyer(VectorItem item)
@@ -172,11 +192,7 @@ static void * TaxCollector_Run(void * arg)
 
 	me->seed = GenerateSeed();
 
-	int old;   // ignored values
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &old);
-	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &old);
-
-	for (;;)
+	while (context->running)
 	{
 		size_t randomIndex = Random(&me->seed, (unsigned long) Vector_Size(collectors));
 		TaxCollector * other = Vector_At(collectors, randomIndex);
@@ -185,56 +201,61 @@ static void * TaxCollector_Run(void * arg)
 			continue;
 
 		pthread_mutex_lock(&context->lock);
-
-		printf("%d chooses %d\n", me->id, other->id);
-
-		bool result = CheckDependencies(me, other);
-		if (result)
-		{
-			printf("credit balance of %d: %d\n", other->id, other->data.creditBalance);
-
-			while (other->data.creditBalance < MIN_CREDIT_BALANCE)
-			{
-				printf("%d waits for %d\n", me->id, other->id);
-				me->waitTaxCollector = other;
-				pthread_cond_wait(&other->minCreditBalanceCondition, &context->lock);
-				me->waitTaxCollector = NULL;
-				printf("%d finished waiting for %d\n", me->id, other->id);
-			}
-
-			int transferSize = other->data.creditBalance / 2;
-			other->data.creditBalance -= transferSize;
-			other->data.outPostings += transferSize;
-
-			me->data.creditBalance += transferSize;
-			me->data.inPostings += transferSize;
-
-			if (me->data.creditBalance >= MIN_CREDIT_BALANCE)
-				pthread_cond_broadcast(&me->minCreditBalanceCondition);
-
-			printf("credit balance of %d: %d\n", me->id, me->data.creditBalance);
-		}
-		else printf("%d is not taking %d because of cyclic dependency\n", me->id, other->id);
-
+		me->other = other;
 		pthread_mutex_unlock(&context->lock);
 
-		sched_yield();
+		while (context->running)
+		{
+			pthread_mutex_lock(&context->lock);
+			if (me->other->data.creditBalance >= MIN_CREDIT_BALANCE)
+			{
+				int transferSize = me->other->data.creditBalance / 2;
+				me->other->data.creditBalance -= transferSize;
+				me->other->data.outPostings += transferSize;
+
+				me->data.creditBalance += transferSize;
+				me->data.inPostings += transferSize;
+
+				me->other = NULL;
+
+				pthread_mutex_unlock(&context->lock);
+				break;
+			};
+			pthread_mutex_unlock(&context->lock);
+		}
 	}
+
+	return NULL;
+}
+
+static void * DependencyChecker_Run(void * arg)
+{
+	SimulationContext * context = arg;
+
+	while (context->running)
+	{
+		pthread_mutex_lock(&context->lock);
+
+		TaxCollector * taxCollector = Vector_At(&context->taxCollectors, 0);
+		PrepareCycleDetection(&context->taxCollectors);
+		if ((taxCollector = DetectCycle(taxCollector)) != NULL)
+		{
+			printf("Cycle detected!\n");
+			printCurrState(context);
+			TaxCollector * suitableCollector = FindSuitableTaxCollector(context, taxCollector);
+			printf("%d is redirected to %d\n\n", taxCollector->id, suitableCollector->id);
+			taxCollector->other = suitableCollector;
+		}
+
+		pthread_mutex_unlock(&context->lock);
+	}
+
+	return NULL;
 }
 
 static unsigned int GenerateSeed()
 {
 	return (unsigned int) time(NULL) ^ getpid() ^ (unsigned int) pthread_self();
-}
-
-static bool CheckDependencies(TaxCollector * from, TaxCollector * to)
-{
-	if (to->waitTaxCollector == NULL || to->data.creditBalance >= MIN_CREDIT_BALANCE)
-		return true;
-	else if (to->waitTaxCollector == from)
-		return false;
-	else
-		return CheckDependencies(from, to->waitTaxCollector);
 }
 
 static unsigned long Random(unsigned int * seed, unsigned long max)
@@ -260,4 +281,54 @@ static void printResults(Vector * taxCollectors)
 		       "Total funding:      %d s\n",
 	       totalInPostings, totalOutPostings, totalFunding
 	);
+}
+
+static void printCurrState(SimulationContext * context)
+{
+	int total = 0;
+	TaxCollector * taxCollector;
+	Vector_ForeachBegin(&context->taxCollectors, taxCollector, i)
+		printf("%d:\n\tcredit balance = %d\n", taxCollector->id, taxCollector->data.creditBalance);
+		if (taxCollector->other)
+			printf("\tother = %d", taxCollector->other->id);
+		else
+			printf("\tother = NULL");
+		printf("\n");
+		total += taxCollector->data.creditBalance;
+	Vector_ForeachEnd
+	printf("total credit balance: %d\n", total);
+}
+
+static void PrepareCycleDetection(Vector * taxCollectors)
+{
+	TaxCollector * taxCollector;
+	Vector_ForeachBegin(taxCollectors, taxCollector, i)
+		taxCollector->visited = false;
+	Vector_ForeachEnd
+}
+
+static TaxCollector * DetectCycle(TaxCollector * collector)
+{
+	if (collector->other == NULL || collector->other->data.creditBalance >= MIN_CREDIT_BALANCE)
+		return NULL;
+
+	if (collector->visited)
+		return collector;
+
+	collector->visited = true;
+
+	return DetectCycle(collector->other);
+}
+
+static TaxCollector * FindSuitableTaxCollector(SimulationContext * context, TaxCollector * self)
+{
+	TaxCollector * taxCollector;
+	Vector_ForeachBegin(&context->taxCollectors, taxCollector, i)
+		if (taxCollector == self)
+			continue;
+		if (taxCollector->data.creditBalance >= MIN_CREDIT_BALANCE)
+			return taxCollector;
+	Vector_ForeachEnd
+	assert(0);  // this should never happen!
+	return NULL;
 }
