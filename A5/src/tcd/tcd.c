@@ -28,7 +28,6 @@ typedef struct TaxCollector_s
 	CollectorData data;
 	unsigned int seed;
 	struct TaxCollector_s * other;
-	// for debugging / TODO: remove this!
 	int id;
 	// for finding cycles;
 	bool visited;
@@ -40,7 +39,7 @@ static void SimulationContext_Init(SimulationContext * self);
 
 static void SimulationContext_Destroy(SimulationContext * self);
 
-static void TaxCollector_Init(TaxCollector * self, SimulationContext * context, int initialCreditBalance);
+static void TaxCollector_Init(TaxCollector * self, SimulationContext * context, int initialCreditBalance, int id);
 
 static void TaxCollector_Destroy(TaxCollector * self);
 
@@ -112,9 +111,7 @@ static void StartSimulation(double duration, int collectors, int funds)
 	for (int i = 0; i < collectors; ++i)
 	{
 		TaxCollector taxCollector;
-		TaxCollector_Init(&taxCollector, &simulationContext, funds);
-		// TODO: remove this!
-		taxCollector.id = i;
+		TaxCollector_Init(&taxCollector, &simulationContext, funds, i);
 		Vector_Append(&simulationContext.taxCollectors, &taxCollector);
 	}
 
@@ -164,13 +161,14 @@ static void SimulationContext_Destroy(SimulationContext * self)
 	pthread_mutex_destroy(&self->lock);
 }
 
-static void TaxCollector_Init(TaxCollector * self, SimulationContext * context, int initialCreditBalance)
+static void TaxCollector_Init(TaxCollector * self, SimulationContext * context, int initialCreditBalance, int id)
 {
 	self->context = context;
 	self->data.inPostings = 0;
 	self->data.outPostings = 0;
 	self->data.creditBalance = initialCreditBalance;
 	self->other = NULL;
+	self->id = id;
 	self->visited = false;
 }
 
@@ -274,8 +272,18 @@ static void printResults(Vector * taxCollectors)
 		totalInPostings += taxCollector->data.inPostings;
 		totalOutPostings += taxCollector->data.outPostings;
 		totalFunding += taxCollector->data.creditBalance;
-    Vector_ForeachEnd
 
+		printf("\nStatistics of tax collector %d:\n"
+			       "\tin postings:\t%d\n"
+			       "\tout postings:\t%d\n"
+			       "\tcredit balance:\t%d\n\n",
+		       taxCollector->id,
+		       taxCollector->data.inPostings,
+		       taxCollector->data.outPostings,
+		       taxCollector->data.creditBalance);
+	Vector_ForeachEnd
+
+	printf("-----------------------------\n");
 	printf("Total in postings:  %d\n"
 		       "Total out postings: %d EUR\n"
 		       "Total funding:      %d s\n",
