@@ -6,3 +6,5 @@ S16
 *.elf
 cmake-build-debug/
 .idea/
+
+swap.c
