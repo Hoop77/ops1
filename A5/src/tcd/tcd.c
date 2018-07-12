@@ -274,9 +274,9 @@ static void printResults(Vector * taxCollectors)
 		totalFunding += taxCollector->data.creditBalance;
 
 		printf("\nStatistics of tax collector %d:\n"
-			       "\tin postings:\t%d\n"
-			       "\tout postings:\t%d\n"
-			       "\tcredit balance:\t%d\n\n",
+			       "\tin postings:\t%d EUR\n"
+			       "\tout postings:\t%d EUR\n"
+			       "\tcredit balance:\t%d EUR\n\n",
 		       taxCollector->id,
 		       taxCollector->data.inPostings,
 		       taxCollector->data.outPostings,
@@ -284,9 +284,9 @@ static void printResults(Vector * taxCollectors)
 	Vector_ForeachEnd
 
 	printf("-----------------------------\n");
-	printf("Total in postings:  %d\n"
+	printf("Total in postings:  %d EUR\n"
 		       "Total out postings: %d EUR\n"
-		       "Total funding:      %d s\n",
+		       "Total funding:      %d EUR\n",
 	       totalInPostings, totalOutPostings, totalFunding
 	);
 }
