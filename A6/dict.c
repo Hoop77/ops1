@@ -6,10 +6,6 @@
 #include <string.h>
 #include "dict.h"
 
-static void grow(dict_t * self);
-
-static int locate(const dict_t * self, const char * key, unsigned int * result);
-
 /**@brief Calculates the hash value of a memory block relative to hash value of
  * the previous block.
  * @param key   pointer to the memory block
@@ -99,7 +95,7 @@ void dictRemove(dict_t * self, const char * key)
 	}
 }
 
-static void grow(dict_t * self)
+void grow(dict_t * self)
 {
 	dict_entry_t * data = self->data, * it, * end;
 	unsigned int cap = 1u << self->bits;
@@ -121,7 +117,7 @@ static void grow(dict_t * self)
 	free(data);
 }
 
-static int locate(const dict_t * self, const char * key, unsigned int * result)
+int locate(const dict_t * self, const char * key, unsigned int * result)
 {
 	enum
 	{
