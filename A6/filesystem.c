@@ -4,6 +4,8 @@
 typedef struct location_s{
     char *directoryPath;
     char *name;
+    size_t pathlength;
+    size_t namelength;
 } location_t;
 
 typedef struct file_s {
@@ -63,7 +65,7 @@ int fileSystemLookup(fileSystem_t *self, file_t *file)
 {
     if (file->location.directoryPath != NULL && file->location.name != NULL)
     {
-        // Search for hashval with filepath
+        // Search for hashval with filepath and OVERWRITES hashval
         char* path = (char*) malloc( (file->location.namelength + file->location.pathlength) * sizeof(char) +1);
 
         loc2path(&file->location, path);
@@ -78,26 +80,35 @@ int fileSystemLookup(fileSystem_t *self, file_t *file)
     }
     if (file->hashValue != -1)
     {
-        // Search for filepath with hashval
+        // Search for filepath with hashval and OVERWRITES path
         char tempHashValueBuffer [22];
         sprintf(tempHashValueBuffer, "%i", (int) file->hashValue);
 
-        char *path = (char*) dictFind(self->hash2path, tempHashValueBuffer);
-        if (path != NULL) { return 1; }
+        Vector *pathVector = (Vector*) dictFind(self->hash2path, tempHashValueBuffer);
+        if (pathVector != NULL) { return 1; }
 
-        // TODO: dictFind will return a vector*
-
+        path2loc(&file->location, Vector_At(pathVector, 0));
+        return 0;
     }
     return -1;
-
 }
 
 void fileSystemInsert(fileSystem_t *self, file_t *file)
 {
-
+    location_t newEntry;
+    newEntry.pathlength = file->location.pathlength;
+    newEntry.namelength = file->location.namelength;
+    new
+    int result = fileSystemLookup(self, file);
+    if (result == -1) { fprintf(stderr, "Can't insert an empty file!\n"); }
 }
 
 void fileSystemDelete(fileSystem_t *self, file_t *file)
+{
+
+}
+
+void fileSystemWriteDown(fileSystem_t *self)
 {
 
 }

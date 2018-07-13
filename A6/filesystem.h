@@ -2,6 +2,7 @@
 #define FILESYSTEM_H
 
 #include "dict.h"
+#include "Vector.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,5 +38,7 @@ extern int fileSystemLookup(fileSystem_t *self, file_t *file);
 extern void fileSystemInsert(fileSystem_t *self, file_t *file);
 
 extern void fileSystemDelete(fileSystem_t *self, file_t *file);
+
+extern void fileSystemWriteDown(fileSystem_t *self);
 
 #endif
