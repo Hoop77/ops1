@@ -1,4 +1,4 @@
-#include "filesystem.h"
+#include "../../include/filesystem/Filesystem.h"
 
 /*
 typedef struct location_s{
@@ -100,14 +100,4 @@ void fileSystemInsert(fileSystem_t *self, file_t *file)
 void fileSystemDelete(fileSystem_t *self, file_t *file)
 {
 
-}
-
-int main(int argc, char** argv)
-{
-    printf("-- Begin --\n");
-    fileSystem_t fs;
-    fileSystemInit(&fs);
-    fileSystemRelease(&fs);
-    printf("--  End  --\n");
-    return 0;
 }

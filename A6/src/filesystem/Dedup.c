@@ -12,7 +12,7 @@
 #define FUSE_USE_VERSION 31
 #include <fuse3/fuse.h>
 
-#include "dict.h"
+#include "../../include/common/Dict.h"
 
 /**@brief Initializes the file system.
  */

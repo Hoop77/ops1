@@ -2,8 +2,8 @@
 // Created by philipp on 24.05.18.
 //
 
-#include "Vector.h"
-#include "Utils.h"
+#include "../../include/common/Vector.h"
+#include "../../include/common/Utils.h"
 #include <string.h>
 
 #define ITEM_ADDR(self, index) \

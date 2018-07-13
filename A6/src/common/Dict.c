@@ -4,7 +4,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "dict.h"
+#include "../../include/common/Dict.h"
 
 /**@brief Calculates the hash value of a memory block relative to hash value of
  * the previous block.
