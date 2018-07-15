@@ -2,18 +2,20 @@
 .SUFFIXES:
 .PHONY: all run pack clean
 
-SRC = dict.c filesystem.c Vector.c
-HED = dict.h filesystem.h Vector.h
+CSRC = $(wildcard src/common/*.c)
+FSRC = src/filesystem/Filesystem.c
+CHED = $(wildcard include/common/*.h)
+FHED = include/filesystem/Filesystem.h
 
 TAR = fss
 
 CFLAGS = -std=gnu11 -c -g -Os -Wall -Werror
 LFLAGS = -pthread
 
-%.o: $(SRC) $(HED)
+%.o: $(CSRC) $(FSRC) $(CHED) $(FHED)
 	$(CC) $(CFLAGS) $< -o $@
 
-fss: $(SRC)
+fss: $(CSRC) $(FSRC)
 	$(CC) $(LFLAGS) $^ -o $@
 
 all: $(TAR)
