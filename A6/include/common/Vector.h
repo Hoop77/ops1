@@ -58,4 +58,6 @@ bool Vector_IsEmpty(Vector * self);
 
 bool Vector_Contains(Vector * self, VectorItem searchItem, VectorItemComparator comparator);
 
+bool Vector_Find(Vector * self, VectorItem searchItem, VectorItemComparator comparator, VectorIterator * result);
+
 #endif //REMOTE_SHELL_VECTOR_H

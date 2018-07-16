@@ -17,7 +17,7 @@ set(SOURCE_FILES
         include/common/Reader.h
         include/common/Dict.h
         include/common/Array.h
-        include/filesystem/Filesystem.h
+        include/filesystem/DedupLayer.h
         src/common/Vector.c
         src/common/Acceptor.c
         src/common/Socket.c
@@ -31,7 +31,7 @@ set(SOURCE_FILES
         src/common/Reader.c
         src/common/Array.c
         src/common/Dict.c
-        src/filesystem/Filesystem.c)
+        src/filesystem/DedupLayer.c)
 
 link_libraries(libfuse3.so)
 

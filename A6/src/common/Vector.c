@@ -130,10 +130,19 @@ bool Vector_IsEmpty(Vector * self)
 
 bool Vector_Contains(Vector * self, VectorItem searchItem, VectorItemComparator comparator)
 {
-    VectorItem currItem;
-    Vector_ForeachBegin(self, currItem, i)
-        if (comparator(currItem, searchItem))
-            return true;
-    Vector_ForeachEnd;
-    return false;
+    return Vector_Find(self, searchItem, comparator, NULL);
+}
+
+bool Vector_Find(Vector * self, VectorItem searchItem, VectorItemComparator comparator, VectorIterator * result)
+{
+	VectorItem currItem;
+	Vector_ForeachBegin(self, currItem, i)
+		if (comparator(currItem, searchItem))
+		{
+			if (result != NULL)
+				*result = i;
+			return true;
+		}
+	Vector_ForeachEnd;
+	return false;
 }

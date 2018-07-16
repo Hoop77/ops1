@@ -3,9 +3,9 @@
 .PHONY: all run pack clean
 
 CSRC = $(wildcard src/common/*.c)
-FSRC = src/filesystem/Filesystem.c
+FSRC = src/filesystem/DedupLayer.c
 CHED = $(wildcard include/common/*.h)
-FHED = include/filesystem/Filesystem.h
+FHED = include/filesystem/DedupLayer.h
 
 TAR = fss
 
