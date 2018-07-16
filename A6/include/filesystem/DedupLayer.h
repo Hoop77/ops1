@@ -11,7 +11,7 @@
 
 typedef struct
 {
-	dict_t dir2entries;
+	dict_t dirPath2entries;
 	dict_t filePath2fileHash;
 	dict_t fileHash2fileReferences;
 } DedupLayer;

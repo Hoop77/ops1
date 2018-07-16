@@ -1,24 +1,36 @@
 #!/usr/bin/make
 .SUFFIXES:
-.PHONY: all run pack clean
+.PHONY: all run umount pack clean
 
-CSRC = $(wildcard src/common/*.c)
-FSRC = src/filesystem/DedupLayer.c
-CHED = $(wildcard include/common/*.h)
-FHED = include/filesystem/DedupLayer.h
+TAR = dedup
+PCK = lab-6.zip
+SRC = $(wildcard src/common/*.c) $(wildcard src/filesystem/*.c)
+OBJ = $(SRC:%.c=%.o)
+CFLAGS := -std=gnu11 -c -g -Os -Wall -Wno-unused-value -Wno-unused-result `pkg-config fuse3 --cflags`
+LFLAGS := `pkg-config fuse3 --libs` -Wl,-rpath="`pkg-config fuse3 --libs-only-L | cut -c 3-`"
 
-TAR = fss
+%.o: %.c %.h
+	$(CC) $< $(CFLAGS) -o $@
 
-CFLAGS = -std=gnu11 -c -g -Os -Wall -Werror
-LFLAGS = -pthread
+%.o: %.c
+	$(CC) $< $(CFLAGS) -o $@
 
-%.o: $(CSRC) $(FSRC) $(CHED) $(FHED)
-	$(CC) $(CFLAGS) $< -o $@
+$(TAR): $(OBJ)
+	$(CC) $^ $(LFLAGS) -o $@
 
-fss: $(CSRC) $(FSRC)
-	$(CC) $(LFLAGS) $^ -o $@
+$(TAR)_fs:
+	mkdir $@
 
 all: $(TAR)
 
-run: all
-	./$(TAR)
+run: all $(TAR)_fs umount
+	./$(TAR) $(TAR)_fs
+
+umount:
+	@if `grep -qs $(TAR)_fs /etc/mtab`; then fusermount -u $(TAR)_fs; fi
+
+pack: clean
+	zip $(PCK) *.c *.h Makefile -x "./.*"
+
+clean: umount
+	$(RM) $(OBJ) $(TAR)

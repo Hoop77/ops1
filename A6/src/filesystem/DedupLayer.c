@@ -7,6 +7,14 @@ static void StringItemDestroyer(VectorItem item);
 
 static bool StringItemEquals(VectorItem lhs, VectorItem rhs);
 
+static void StringKeyDestroyer(void * key);
+
+static bool StringKeyComparator(const void * key1, const void * key2);
+
+static void FileHashDestroyer(void * key);
+
+static bool FileHashComparator(const void * key1, const void * key2);
+
 static FileHash * FindFileHash(DedupLayer * self, String * filePath);
 
 static void RemoveFileHash(DedupLayer * self, String * filePath);
@@ -54,18 +62,18 @@ static bool CopyFile(String * srcPath, String * destPath);
 
 static bool RedirectFileDescriptor(FileDescriptor fd, String * newPath);
 
-static void MakePath(String * dirPath, struct dirent * entry, String * fullPath);
+static void MakePath(String * dirPath, String * entry, String * fullPath);
 
 void DedupLayer_Init(DedupLayer * self)
 {
-	dictInit(&self->dir2entries);
-	dictInit(&self->filePath2fileHash);
-	dictInit(&self->fileHash2fileReferences);
+	dictInit(&self->dirPath2entries, sizeof(String), StringKeyDestroyer, StringKeyComparator);
+	dictInit(&self->filePath2fileHash, sizeof(String), StringKeyDestroyer, StringKeyComparator);
+	dictInit(&self->fileHash2fileReferences, sizeof(FileHash), FileHashDestroyer, FileHashComparator);
 }
 
 Vector * DedupLayer_GetDirectoryEntries(DedupLayer * self, String * dirPath)
 {
-	return (Vector *) dictFind(&self->dir2entries, String_CharArray(dirPath));
+	return FindDirEntries(self, dirPath);
 }
 
 String * DedupLayer_GetTrueFilePath(DedupLayer * self, String * origFilePath)
@@ -142,23 +150,50 @@ bool DedupLayer_RemoveDirectory(DedupLayer * self, String * dirPath)
 	if ((dir = opendir(String_CharArray(dirPath))) == NULL)
 		return false;
 
+	printf("DedupLayer_RemoveDirectory 1\n");
+
 	while ((entry = readdir(dir)) != NULL)
 	{
+		String strEntry;
+		String_InitFromCharArray(&strEntry, entry->d_name);
+		if (String_EqualsCharArray(&strEntry, "..") || String_EqualsCharArray(&strEntry, "."))
+		{
+			String_Destroy(&strEntry);
+			continue;
+		}
+
 		String path;
-		MakePath(dirPath, entry, &path);
+		MakePath(dirPath, &strEntry, &path);
+		printf("DedupLayer_RemoveDirectory path=%s\n", String_CharArray(&path));
 		if (entry->d_type == DT_DIR)
 		{
 			if (!DedupLayer_RemoveDirectory(self, &path))
+			{
+				String_Destroy(&path);
+				String_Destroy(&strEntry);
 				return false;
+			}
 		}
 		else
 		{
 			if (!DedupLayer_Unlink(self, &path))
+			{
+				String_Destroy(&path);
+				String_Destroy(&strEntry);
 				return false;
+			}
 		}
+		String_Destroy(&path);
+		String_Destroy(&strEntry);
 	}
 
 	closedir(dir);
+
+	if (rmdir(String_CharArray(dirPath)) != 0)
+		return false;
+
+	printf("DedupLayer_RemoveDirectory 3\n");
+
 	return true;
 }
 
@@ -172,34 +207,72 @@ static bool StringItemEquals(VectorItem lhs, VectorItem rhs)
 	return String_Equals((String *) lhs, (String *) rhs);
 }
 
+static void StringKeyDestroyer(void * key)
+{
+	String_Destroy((String *) key);
+}
+
+static bool StringKeyComparator(const void * key1, const void * key2)
+{
+	return String_Equals((String *) key1, (String *) key2);
+}
+
+static void FileHashDestroyer(void * key)
+{}
+
+static bool FileHashComparator(const void * key1, const void * key2)
+{
+	return *((FileHash *) key1) == *((FileHash *) key2);
+}
+
 static FileHash * FindFileHash(DedupLayer * self, String * filePath)
 {
-	// TODO: Implementation
+	return (FileHash *) dictFind(&self->filePath2fileHash, filePath);
 }
 
 static void RemoveFileHash(DedupLayer * self, String * filePath)
 {
-	// TODO: Implementation
+	FileHash * fileHash = FindFileHash(self, filePath);
+	if (!fileHash)
+		return;
+	dictRemove(&self->filePath2fileHash, filePath);
+	free(fileHash);
 }
 
 static FileHash * InsertFileHash(DedupLayer * self, String * filePath)
 {
-	// TODO: Implementation
+	FileHash * fileHash = FindFileHash(self, filePath);
+	if (fileHash)
+		return fileHash;
+	fileHash = (FileHash *) malloc(sizeof(FileHash));
+	dictInsert(&self->filePath2fileHash, filePath, fileHash);
+	return fileHash;
 }
 
 static Vector * FindFileReferences(DedupLayer * self, FileHash fileHash)
 {
-	// TODO: Implementation
+	return (Vector *) dictFind(&self->fileHash2fileReferences, &fileHash);
 }
 
 static void RemoveFileReferences(DedupLayer * self, FileHash fileHash)
 {
-	// TODO: Implementation
+	Vector * fileReferences = FindFileReferences(self, fileHash);
+	if (!fileReferences)
+		return;
+	dictRemove(&self->fileHash2fileReferences, &fileHash);
+	Vector_Destroy(fileReferences);
+	free(fileReferences);
 }
 
 static Vector * InsertFileReferences(DedupLayer * self, FileHash fileHash)
 {
-	// TODO: Implementation
+	Vector * fileReferences = FindFileReferences(self, fileHash);
+	if (fileReferences)
+		return fileReferences;
+	fileReferences = (Vector *) malloc(sizeof(Vector));
+	Vector_Init(fileReferences, sizeof(String), StringItemDestroyer);
+	dictInsert(&self->fileHash2fileReferences, &fileHash, fileReferences);
+	return fileReferences;
 }
 
 static bool DeleteFileReference(DedupLayer * self, String * origFilePath, FileHash fileHash, bool keepFile)
@@ -302,17 +375,28 @@ static bool UpdateFileReference(DedupLayer * self,
 
 static Vector * FindDirEntries(DedupLayer * self, String * dirPath)
 {
-	// TODO: Implementation
+	return (Vector *) dictFind(&self->dirPath2entries, dirPath);
 }
 
 static void RemoveDirEntries(DedupLayer * self, String * dirPath)
 {
-	// TODO: Implementation
+	Vector * dirEntries = FindDirEntries(self, dirPath);
+	if (!dirEntries)
+		return;
+	dictRemove(&self->dirPath2entries, dirPath);
+	Vector_Destroy(dirEntries);
+	free(dirEntries);
 }
 
 static Vector * InsertDirEntries(DedupLayer * self, String * dirPath)
 {
-	// TODO: Implementation
+	Vector * dirEntries = FindDirEntries(self, dirPath);
+	if (dirEntries)
+		return dirEntries;
+	dirEntries = (Vector *) malloc(sizeof(Vector));
+	Vector_Init(dirEntries, sizeof(String), StringItemDestroyer);
+	dictInsert(&self->dirPath2entries, dirPath, dirEntries);
+	return dirEntries;
 }
 
 static void AddDirEntry(DedupLayer * self, String * filePath)
@@ -327,7 +411,7 @@ static void DeleteDirEntry(DedupLayer * self, String * filePath)
 
 static String * GetTrueFilePath(Vector * fileReferences)
 {
-	// TODO: Implementation
+	return Vector_At(fileReferences, 0);
 }
 
 static bool ComputeFileHash(FileDescriptor fd, FileHash * fileHash)
@@ -360,7 +444,7 @@ static bool RedirectFileDescriptor(FileDescriptor fd, String * newPath)
 		close(newFd);
 		return false;
 	}
-
+	close(newFd);
 	return true;
 }
 
@@ -369,7 +453,9 @@ static bool CopyFile(String * srcPath, String * destPath)
 	// TODO: Implementation
 }
 
-static void MakePath(String * dirPath, struct dirent * entry, String * fullPath)
+static void MakePath(String * dirPath, String * entry, String * fullPath)
 {
-	// TODO: Implementation
+	String_Copy(dirPath, fullPath);
+	String_AppendChar(fullPath, '/');
+	String_Append(fullPath, entry);
 }
